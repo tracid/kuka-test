@@ -1,0 +1,2114 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sackpalettierung KR 3200 PA</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: Leitstand – links die 3D-Zelle mit Bedienleiste, rechts das Programm-Panel wie am Handbediengeraet (SRC mit Satzzeiger, DAT, E/A) */
+:root {
+  --bg: #e7ebef;
+  --surface: #f5f7f9;
+  --surface-2: #ffffff;
+  --line: #cdd4dc;
+  --fg: #17202a;
+  --muted: #586473;
+  --accent: #d9661a;
+  --accent-ink: #ffffff;
+  --accent-soft: #fbe2cf;
+  --steel: #2c6a99;
+  --steel-soft: #dde9f3;
+  --ok: #1d9a52;
+  --warn: #b77d00;
+  --err: #c4372c;
+  --led-off: #b8c1cb;
+  --scene: #dde3e8;
+  --floor: #c5ccd3;
+  --grid: #b0bac4;
+  --code-bg: #fbfcfd;
+  --code-run: #fbdcc4;
+  --code-adv: #dce8f3;
+  --f-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --f-body: "Archivo", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10151b; --surface: #161c23; --surface-2: #1c232b; --line: #2a333d; --fg: #e3e8ed; --muted: #94a1ae;
+    --accent: #f08a3c; --accent-ink: #1b1007; --accent-soft: #3b2616; --steel: #6ea8d6; --steel-soft: #1b2b39;
+    --ok: #3fcf7f; --warn: #e3ae2e; --err: #f06b5f; --led-off: #3a4450;
+    --scene: #141a20; --floor: #20272e; --grid: #313b45;
+    --code-bg: #12171d; --code-run: #4a2b13; --code-adv: #1b2a38;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10151b; --surface: #161c23; --surface-2: #1c232b; --line: #2a333d; --fg: #e3e8ed; --muted: #94a1ae;
+  --accent: #f08a3c; --accent-ink: #1b1007; --accent-soft: #3b2616; --steel: #6ea8d6; --steel-soft: #1b2b39;
+  --ok: #3fcf7f; --warn: #e3ae2e; --err: #f06b5f; --led-off: #3a4450;
+  --scene: #141a20; --floor: #20272e; --grid: #313b45;
+  --code-bg: #12171d; --code-run: #4a2b13; --code-adv: #1b2a38;
+  color-scheme: dark;
+}
+
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 14px; }
+* { box-sizing: border-box; }
+button, select, input, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--steel); outline-offset: 2px; }
+
+.app {
+  height: 100%;
+  display: flex; flex-direction: column; gap: 10px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 12px 14px;
+}
+
+/* ---------- Kopf ---------- */
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px 24px; }
+.title h1 { margin: 0; font-family: var(--f-display); font-weight: 700; font-size: 26px; letter-spacing: 0.01em; line-height: 1; text-wrap: balance; }
+.title p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+.stats { display: flex; flex-wrap: wrap; gap: 6px; }
+.stat { display: grid; gap: 1px; padding: 5px 10px 6px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); min-width: 78px; }
+.stat b { font-family: var(--f-display); font-weight: 600; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.stat span { font-family: var(--f-mono); font-size: 15px; font-variant-numeric: tabular-nums; }
+.stat.hl span { color: var(--accent); }
+
+/* ---------- Hauptbereich ---------- */
+.layout { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 450px; gap: 10px; }
+.stage, .panel { min-width: 0; min-height: 0; display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); overflow: hidden; }
+
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 7px 8px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+.grp { display: flex; align-items: center; gap: 4px; }
+.grp + .grp { padding-left: 10px; border-left: 1px solid var(--line); }
+.lbl { font-family: var(--f-display); font-weight: 600; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-right: 2px; }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); cursor: pointer; font-size: 13px; white-space: nowrap; }
+.btn:hover { border-color: var(--muted); }
+.btn svg { width: 14px; height: 14px; fill: currentColor; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; min-width: 92px; justify-content: center; }
+.btn[aria-pressed="true"] { background: var(--steel-soft); border-color: var(--steel); color: var(--fg); }
+.btn.warnon[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+select.btn { padding-right: 6px; }
+
+.viewport { position: relative; flex: 1; min-height: 0; background: var(--scene); }
+.viewport canvas { display: block; }
+.labels { position: absolute; inset: 0; pointer-events: none; }
+.tag { font-family: var(--f-display); font-weight: 600; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg); background: color-mix(in srgb, var(--surface-2) 82%, transparent); border: 1px solid var(--line); padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
+.pt { font-family: var(--f-mono); font-size: 11px; color: var(--fg); background: color-mix(in srgb, var(--surface-2) 85%, transparent); border-left: 3px solid var(--steel); padding: 0 5px; white-space: nowrap; }
+.pt.place { border-left-color: var(--accent); }
+
+.msgbar { position: absolute; left: 10px; right: 10px; bottom: 10px; display: flex; align-items: center; gap: 10px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 5px; background: color-mix(in srgb, var(--surface-2) 92%, transparent); max-width: 640px; }
+.msgbar .ico { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--led-off); }
+.msgbar[data-kind="run"] .ico { background: var(--ok); }
+.msgbar[data-kind="state"] .ico { background: var(--steel); }
+.msgbar[data-kind="notify"] .ico { background: var(--muted); }
+.msgbar[data-kind="quit"] .ico, .msgbar[data-kind="error"] .ico { background: var(--err); }
+.msgbar .txt { flex: 1; min-width: 0; font-size: 13px; }
+.msgbar .txt small { display: block; color: var(--muted); font-family: var(--f-mono); font-size: 11px; }
+.msgbar .btn { height: 26px; }
+
+/* ---------- Panel ---------- */
+.tabs { display: flex; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+.tab { flex: 1; padding: 9px 6px 8px; border: 0; border-bottom: 2px solid transparent; background: none; cursor: pointer; font-family: var(--f-display); font-weight: 600; font-size: 14px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
+.pane { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.pane-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; padding: 7px 10px; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+.pane-head code { font-family: var(--f-mono); color: var(--fg); font-size: 12px; }
+.keys { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.key { display: inline-flex; align-items: center; gap: 5px; }
+.key i { width: 12px; height: 10px; border-radius: 2px; display: inline-block; }
+.key .k-run { background: var(--code-run); border-left: 3px solid var(--accent); }
+.key .k-adv { background: var(--code-adv); border-left: 3px solid var(--steel); }
+.key label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+
+.code { flex: 1; min-height: 0; overflow: auto; background: var(--code-bg); font-family: var(--f-mono); font-variant-ligatures: none; font-size: 12px; line-height: 1.55; padding: 4px 0 40px; }
+.ln { display: flex; white-space: pre; border-left: 3px solid transparent; }
+.ln .no { flex: none; width: 3.6em; padding-right: 0.9em; text-align: right; color: var(--muted); opacity: 0.7; user-select: none; }
+.ln .tx { padding-right: 16px; }
+.ln.adv { background: var(--code-adv); border-left-color: var(--steel); }
+.ln.run { background: var(--code-run); border-left-color: var(--accent); }
+.t-com { color: var(--muted); }
+.t-kw { color: var(--steel); font-weight: 600; }
+.t-sys { color: var(--accent); }
+.t-str { color: var(--ok); }
+.t-num { color: var(--warn); }
+
+.datwrap { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 8px 10px 10px; }
+.datwrap textarea { font-variant-ligatures: none; flex: 1; min-height: 240px; width: 100%; resize: none; border: 1px solid var(--line); border-radius: 4px; background: var(--code-bg); font-family: var(--f-mono); font-size: 12px; line-height: 1.5; padding: 8px; white-space: pre; overflow: auto; }
+.datfoot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.datmsg { font-size: 12px; color: var(--muted); flex: 1 1 200px; min-width: 0; }
+.datmsg.err { color: var(--err); }
+.note { font-size: 12px; color: var(--muted); margin: 0; }
+
+.iowrap { flex: 1; min-height: 0; overflow: auto; padding: 4px 10px 16px; display: grid; gap: 14px; align-content: start; }
+.iowrap h3 { margin: 8px 0 4px; font-family: var(--f-display); font-weight: 600; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.iotab { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.iotab td { padding: 3px 4px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.iotab td:first-child { width: 18px; }
+.iotab .adr { font-family: var(--f-mono); font-size: 11.5px; color: var(--muted); width: 76px; white-space: nowrap; }
+.iotab .val { font-family: var(--f-mono); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.led { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--led-off); }
+.led.on { background: var(--ok); box-shadow: 0 0 0 2px color-mix(in srgb, var(--ok) 25%, transparent); }
+.led.out.on { background: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent); }
+.axbar { position: relative; height: 6px; background: var(--line); border-radius: 3px; min-width: 70px; }
+.axbar i { position: absolute; top: -2px; width: 3px; height: 10px; background: var(--accent); border-radius: 1px; }
+
+@media (max-width: 980px) {
+  html, body { height: auto; }
+  .app { height: auto; min-height: 100%; }
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .viewport { flex: none; height: 58vh; min-height: 320px; }
+  .panel { height: 72vh; min-height: 420px; }
+}
+@media (max-width: 520px) {
+  .title h1 { font-size: 22px; }
+  .stat { min-width: 0; padding: 4px 8px; }
+  .grp + .grp { padding-left: 0; border-left: 0; }
+  .btn { padding: 0 8px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="title">
+      <h1>Sackpalettierung KR 3200 PA</h1>
+      <p>Säcke 600 × 400 × 200 mm auf Europalette 1200 × 800 · 4 Lagen à 4 Säcke · Sackgabelgreifer, TCP = Sackmitte</p>
+    </div>
+    <div class="stats" aria-live="off">
+      <div class="stat hl"><b>Lage</b><span id="stLage">1 / 4</span></div>
+      <div class="stat hl"><b>Sack</b><span id="stSack">1 / 4</span></div>
+      <div class="stat"><b>Paletten</b><span id="stPal">0</span></div>
+      <div class="stat"><b>Takt Ø</b><span id="stTakt">–</span></div>
+      <div class="stat"><b>Säcke / h</b><span id="stRate">–</span></div>
+      <div class="stat"><b>Simzeit</b><span id="stTime">0:00</span></div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="stage" aria-label="3D-Zelle">
+      <div class="toolbar">
+        <div class="grp">
+          <button class="btn primary" id="btnPlay" type="button"><svg viewBox="0 0 16 16"><path d="M4 2.5v11l9-5.5z"/></svg><span>Start</span></button>
+          <button class="btn" id="btnStep" type="button" title="Bis zum nächsten Satz"><svg viewBox="0 0 16 16"><path d="M3 2.5v11l7-5.5zM11 2.5h2v11h-2z"/></svg>Satz</button>
+          <button class="btn" id="btnReset" type="button" title="Zelle und Programm zurücksetzen"><svg viewBox="0 0 16 16"><path d="M8 2.5a5.5 5.5 0 1 1-5.2 3.7l1.8.6A3.6 3.6 0 1 0 8 4.4V6.5L4.5 3.5 8 .5z"/></svg>Reset</button>
+        </div>
+        <div class="grp">
+          <label class="lbl" for="selSpeed">Zeitraffer</label>
+          <select class="btn" id="selSpeed">
+            <option value="0.5">0,5×</option>
+            <option value="1" selected>1×</option>
+            <option value="2">2×</option>
+            <option value="4">4×</option>
+            <option value="8">8×</option>
+            <option value="16">16×</option>
+          </select>
+        </div>
+        <div class="grp">
+          <span class="lbl">Ansicht</span>
+          <button class="btn" type="button" data-cam="iso">Iso</button>
+          <button class="btn" type="button" data-cam="top">Oben</button>
+          <button class="btn" type="button" data-cam="side">Seite</button>
+          <button class="btn" type="button" data-cam="near">Nah</button>
+        </div>
+        <div class="grp">
+          <button class="btn" id="tgTrail" type="button" aria-pressed="true">Bahn</button>
+          <button class="btn" id="tgPts" type="button" aria-pressed="true">Punkte</button>
+          <button class="btn" id="tgFeed" type="button" aria-pressed="true" title="Sackzufuhr auf der Rollenbahn">Sackzufuhr</button>
+          <button class="btn warnon" id="tgEnd" type="button" aria-pressed="false" title="Eingang Zyklusende setzen">Zyklusende</button>
+        </div>
+      </div>
+      <div class="viewport" id="viewport">
+        <div class="labels" id="labels"></div>
+        <div class="msgbar" id="msgbar" data-kind="notify" role="status">
+          <span class="ico"></span>
+          <div class="txt" id="msgtxt">Bereit</div>
+          <button class="btn" id="btnQuit" type="button" hidden>Quittieren</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel" aria-label="Programm">
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" id="tab-src" aria-selected="true" aria-controls="pane-src" type="button">Programm</button>
+        <button class="tab" role="tab" id="tab-dat" aria-selected="false" aria-controls="pane-dat" type="button">Daten</button>
+        <button class="tab" role="tab" id="tab-io" aria-selected="false" aria-controls="pane-io" type="button">E/A · Achsen</button>
+      </div>
+
+      <section class="pane" id="pane-src" role="tabpanel" aria-labelledby="tab-src">
+        <div class="pane-head">
+          <code>KRC:\R1\Program\Palettierung.src</code>
+          <div class="keys">
+            <span class="key"><i class="k-run"></i>Hauptlauf</span>
+            <span class="key"><i class="k-adv"></i>Vorlauf</span>
+            <span class="key"><label><input type="checkbox" id="cbFollow" checked> folgen</label></span>
+          </div>
+        </div>
+        <div class="code" id="code"></div>
+      </section>
+
+      <section class="pane" id="pane-dat" role="tabpanel" aria-labelledby="tab-dat" hidden>
+        <div class="pane-head"><code>KRC:\R1\Program\Palettierung.dat</code><span>bearbeitbar</span></div>
+        <div class="datwrap">
+          <p class="note">Die Simulation liest Maße, Lagenmuster, Zielpunkt-Offsets, Geschwindigkeiten und E/A-Nummern aus dieser Datenliste. Als Basen verwendet sie die Layout-Frames <code>fBasisPal</code> und <code>fBasisPick</code>, denn <code>BASE_DATA</code> liegt in der Steuerung.</p>
+          <textarea id="datEdit" spellcheck="false" aria-label="Inhalt Palettierung.dat"></textarea>
+          <div class="datfoot">
+            <button class="btn primary" id="btnApply" type="button">Übernehmen</button>
+            <button class="btn" id="btnOrig" type="button">Original laden</button>
+            <span class="datmsg" id="datMsg">Änderungen gelten nur in der Simulation.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="pane" id="pane-io" role="tabpanel" aria-labelledby="tab-io" hidden>
+        <div class="iowrap">
+          <div><h3>Eingänge</h3><table class="iotab" id="tabIn"></table></div>
+          <div><h3>Ausgänge</h3><table class="iotab" id="tabOut"></table></div>
+          <div><h3>Achsen (Modell)</h3><table class="iotab" id="tabAx"></table></div>
+          <div><h3>TCP in Welt</h3><table class="iotab" id="tabTcp"></table></div>
+          <div><h3>Variablen der DAT</h3><table class="iotab" id="tabVar"></table></div>
+          <p class="note">Achswerte stammen aus einem vereinfachten Kinematikmodell mit angenäherten Armlängen (A2 auf 1045 mm, Oberarm 1350 mm, Unterarm 1515 mm). Erreichbarkeit und Taktzeit vor Ort mit KUKA.Sim oder WorkVisual prüfen.</p>
+        </div>
+      </section>
+    </aside>
+  </main>
+</div>
+
+<script type="text/plain" id="krl-src">
+&ACCESS RVP
+&REL 1
+&PARAM TEMPLATE = C:\KRC\Roboter\Template\vorgabe
+&PARAM EDITMASK = *
+DEF Palettierung( )
+;=====================================================================
+; Sackpalettierung  600 x 400 x 200 mm  ->  Europalette 1200 x 800 mm
+; 4 Lagen x 4 Saecke = 16 Saecke je Palette
+;---------------------------------------------------------------------
+; Roboter   : KUKA KR QUANTEC PA, z.B. KR 180 R3200 PA (3195 mm)
+; Steuerung : KR C5 / KR C4 mit KSS 8.x
+; Greifer   : Sackgabelgreifer (Gabelhaelften auf/zu + Niederhalter)
+;             TCP = Mitte des gegriffenen Sacks (TOOL_DATA[nTool])
+; Aufnahme  : Rollenbahn mit Gabelaufnahme seitlich der Palette
+;---------------------------------------------------------------------
+; Parameter, Lagenmuster, E/A-Nummern und Zaehler: Palettierung.dat
+; Alle Zielpunkte werden in Weltkoordinaten berechnet ($BASE = WORLD),
+; ausgehend von Palettenbasis bzw. Aufnahmebasis (Funktion ZielWelt).
+;=====================================================================
+  ;FOLD INI;%{PE}
+    ;FOLD BASISTECH INI
+      GLOBAL INTERRUPT DECL 3 WHEN $STOPMESS==TRUE DO IR_STOPM ( )
+      INTERRUPT ON 3
+      BAS (#INITMOV,0 )
+    ;ENDFOLD (BASISTECH INI)
+    ;FOLD USER INI
+      ;Make your modifications here
+    ;ENDFOLD (USER INI)
+  ;ENDFOLD (INI)
+
+  PalInit()
+
+  ; SAK-Fahrt: erste Bewegung achsspezifisch auf HOME
+  PTP XHOME
+
+  bEnde = FALSE
+  WHILE NOT bEnde
+    ; ---- Palette voll -> Palettenwechsel
+    IF nLage > nLagen THEN
+      PaletteWechsel()
+    ENDIF
+
+    ; ---- einen Sack palettieren
+    IF NOT bSackImGr THEN
+      SackAufnehmen()
+    ENDIF
+    IF bSackImGr THEN
+      SackAblegen()
+    ENDIF
+
+    ; ---- Zyklusende angewaehlt? (Abfrage im Vorlauf, kein Vorlaufstopp)
+    CONTINUE
+    bEnde = $IN[nInZyklEnde]
+  ENDWHILE
+
+  ; ---- Zyklusende: Grundstellung, Zaehler bleiben erhalten
+  PTP XHOME
+END
+
+;=====================================================================
+; Initialisierung
+;=====================================================================
+DEF PalInit( )
+  ; --- Werkzeug, Basis, Interpolationsmodus
+  $TOOL = TOOL_DATA[nTool]
+  $BASE = $NULLFRAME
+  $IPO_MODE = #BASE
+
+  ; --- Geschwindigkeit, Beschleunigung, Ueberschleifen
+  BAS (#VEL_PTP, rVelPTP)
+  BAS (#ACC_PTP, rAccPTP)
+  BAS (#VEL_CP, rVelCP)
+  BAS (#ACC_CP, rAccCP)
+  $APO.CPTP = nApoPTP
+  $APO.CDIS = rApoDis
+  $ADVANCE = 3
+
+  ; --- Daten pruefen
+  nMeldHandle = 0
+  DatenPruefen()
+
+  ; --- Ausgaenge Grundstellung
+  $OUT[nOutSackEntn] = FALSE
+  $OUT[nOutPalVoll] = FALSE
+
+  ; --- Greiferzustand uebernehmen (Sack evtl. noch vom letzten Zyklus)
+  bSackImGr = $IN[nInSackImGr]
+  IF bSackImGr THEN
+    $LOAD = ldVoll
+    Meld_Hinweis(4)
+  ELSE
+    $LOAD = ldLeer
+    GabelAuf()
+    NiederhalterAuf()
+  ENDIF
+END
+
+;=====================================================================
+; Plausibilitaet von Werkzeug, Basen und Parametern
+;=====================================================================
+DEF DatenPruefen( )
+  IF ABS(TOOL_DATA[nTool].Z) < 1.0 THEN
+    Meld_Quit(1)
+    HALT
+  ENDIF
+  IF nBasePal > 0 THEN
+    IF (ABS(BASE_DATA[nBasePal].X) + ABS(BASE_DATA[nBasePal].Y)) < 1.0 THEN
+      Meld_Quit(2)
+      HALT
+    ENDIF
+  ENDIF
+  IF nBasePick > 0 THEN
+    IF (ABS(BASE_DATA[nBasePick].X) + ABS(BASE_DATA[nBasePick].Y)) < 1.0 THEN
+      Meld_Quit(3)
+      HALT
+    ENDIF
+  ENDIF
+  IF (nLagen < 1) OR (nSackProLage < 1) OR (nSackProLage > 8) THEN
+    Meld_Quit(5)
+    HALT
+  ENDIF
+  ; Zaehler ausserhalb des gueltigen Bereichs -> neue Palette
+  IF (nLage < 1) OR (nSack < 1) OR (nSack > nSackProLage) THEN
+    nLage = 1
+    nSack = 1
+  ENDIF
+END
+
+;=====================================================================
+; Sack an der Aufnahme greifen
+;=====================================================================
+DEF SackAufnehmen( )
+  ; --- Zielpunkte (Aufnahmebasis -> Welt)
+  fPickUeber = ZielWelt(2, rPickX, rPickY, rPickZ + rPickUeberZ, rPickA)
+  fPickVor   = ZielWelt(2, rPickX, rPickY, rPickZ + rPickVorZ, rPickA)
+  fPick      = ZielWelt(2, rPickX, rPickY, rPickZ + rPickTief, rPickA)
+
+  ; --- Ueberfahrhoehe ueber der Aufnahme
+  $VEL.CP = rVelCP
+  PTP fPickUeber
+  $OUT[nOutSackEntn] = FALSE
+
+  ; --- Greifer bereit: Gabel offen, Niederhalter oben
+  GabelAuf()
+  NiederhalterAuf()
+
+  ; --- auf Sack warten (Zyklusende beendet auch das Warten)
+  IF NOT $IN[nInSackDa] THEN
+    Meld_Status(10)
+    WAIT FOR $IN[nInSackDa] OR $IN[nInZyklEnde]
+    Meld_Loeschen()
+    IF NOT $IN[nInSackDa] THEN
+      RETURN
+    ENDIF
+  ENDIF
+
+  ; --- absenken: schnell bis Vorposition, dann langsam unter den Sack
+  LIN fPickVor C_DIS
+  $VEL.CP = rVelCPLangsam
+  LIN fPick
+
+  ; --- greifen: Gabelhaelften fahren zwischen den Rollen unter den Sack
+  GabelZu()
+  NiederhalterAb()
+
+  ; --- Kontrolle: Sack im Greifer?
+  WHILE NOT $IN[nInSackImGr]
+    Meld_Quit(20)
+    GabelAuf()
+    NiederhalterAuf()
+    WAIT FOR $IN[nInSackDa]
+    GabelZu()
+    NiederhalterAb()
+  ENDWHILE
+  bSackImGr = TRUE
+  $LOAD = ldVoll
+
+  ; --- anheben; Foerderer freigeben, sobald die Gabel frei ist
+  $VEL.CP = rVelCP
+  TRIGGER WHEN DISTANCE=1 DELAY=0 DO $OUT[nOutSackEntn]=TRUE
+  LIN fPickUeber C_DIS
+END
+
+;=====================================================================
+; Sack nach Lagenmuster auf der Palette ablegen
+;=====================================================================
+DEF SackAblegen( )
+  DECL INT nMus
+  DECL REAL rX, rY, rZ, rA, rVX, rVY
+  DECL BOOL bPalOk
+
+  ; --- Lagenmuster: ungerade Lage -> Muster 1, gerade Lage -> Muster 2
+  IF (nLage MOD 2) == 1 THEN
+    nMus = 1
+  ELSE
+    nMus = 2
+  ENDIF
+  rX  = Muster[nMus,nSack].X
+  rY  = Muster[nMus,nSack].Y
+  rA  = Muster[nMus,nSack].A
+  rVX = Muster[nMus,nSack].VX * rVorXY
+  rVY = Muster[nMus,nSack].VY * rVorXY
+  ; --- Sackmitte in der aktuellen Lage
+  rZ  = rPalZ0 + (nLage - 1) * rLagenH + 0.5 * rLagenH
+
+  ; --- Zielpunkte (Palettenbasis -> Welt)
+  fUeber   = ZielWelt(1, rX + rVX, rY + rVY, rZ + rUeberZ, rA)
+  fVor     = ZielWelt(1, rX + rVX, rY + rVY, rZ + rVorZ, rA)
+  fAblage  = ZielWelt(1, rX, rY, rZ + rAblageZ, rA)
+  fAbheben = ZielWelt(1, rX, rY, rZ + rUeberZ, rA)
+
+  ; --- Palette bereit? (Abfrage im Vorlauf, kein Vorlaufstopp)
+  CONTINUE
+  bPalOk = $IN[nInPalBereit]
+  IF NOT bPalOk THEN
+    Meld_Status(11)
+    WAIT FOR $IN[nInPalBereit]
+    Meld_Loeschen()
+  ENDIF
+
+  ; --- Ueberfahrhoehe seitlich versetzt, dann schraeg an die Nachbarn
+  $VEL.CP = rVelCP
+  PTP fUeber C_PTP
+  LIN fVor C_DIS
+  $VEL.CP = rVelCPLangsam
+  LIN fAblage
+
+  ; --- Kontrolle: Sack noch im Greifer?
+  IF NOT $IN[nInSackImGr] THEN
+    Meld_Quit(21)
+    bSackImGr = FALSE
+    $LOAD = ldLeer
+    $VEL.CP = rVelCP
+    LIN fAbheben
+    RETURN
+  ENDIF
+
+  ; --- ablegen: Gabel oeffnen, Niederhalter haelt den Sack
+  GabelAuf()
+  NiederhalterAuf()
+  bSackImGr = FALSE
+  $LOAD = ldLeer
+  Weiterzaehlen()
+
+  ; --- senkrecht abheben
+  $VEL.CP = rVelCP
+  LIN fAbheben C_DIS
+END
+
+;=====================================================================
+; Sack- und Lagenzaehler weiterschalten
+;=====================================================================
+DEF Weiterzaehlen( )
+  nSack = nSack + 1
+  IF nSack > nSackProLage THEN
+    nSack = 1
+    nLage = nLage + 1
+  ENDIF
+END
+
+;=====================================================================
+; Palette voll: freifahren, Wechsel anfordern, auf leere Palette warten
+;=====================================================================
+DEF PaletteWechsel( )
+  PTP XHOME
+  $OUT[nOutPalVoll] = TRUE
+  Meld_Status(12)
+  ; volle Palette wird abgefoerdert ...
+  WAIT FOR NOT $IN[nInPalBereit]
+  ; ... und neue leere Palette steht bereit
+  WAIT FOR $IN[nInPalBereit]
+  $OUT[nOutPalVoll] = FALSE
+  Meld_Loeschen()
+  nPalGesamt = nPalGesamt + 1
+  nLage = 1
+  nSack = 1
+END
+
+;=====================================================================
+; Zielpunkt in Weltkoordinaten
+;   nStation    : 1 = Palette, 2 = Aufnahme
+;   rX,rY,rZ,rA : TCP (Sackmitte) in der Stationsbasis
+; PA-Kinematik: Flansch steht immer waagerecht -> B/C fest
+;=====================================================================
+DEFFCT FRAME ZielWelt(nStation:IN, rX:IN, rY:IN, rZ:IN, rA:IN)
+  DECL INT nStation
+  DECL REAL rX, rY, rZ, rA
+  DECL FRAME fBas, fLok, fWelt
+
+  IF nStation == 1 THEN
+    IF nBasePal > 0 THEN
+      fBas = BASE_DATA[nBasePal]
+    ELSE
+      fBas = fBasisPal
+    ENDIF
+  ELSE
+    IF nBasePick > 0 THEN
+      fBas = BASE_DATA[nBasePick]
+    ELSE
+      fBas = fBasisPick
+    ENDIF
+  ENDIF
+
+  fLok = $NULLFRAME
+  fLok.X = rX
+  fLok.Y = rY
+  fLok.Z = rZ
+  fLok.A = rA
+  fLok.B = rOriB
+  fLok.C = rOriC
+
+  fWelt = fBas : fLok
+  fWelt.B = rOriB
+  fWelt.C = rOriC
+  RETURN fWelt
+ENDFCT
+
+;=====================================================================
+; Greifer
+;=====================================================================
+DEF GabelAuf( )
+  DECL BOOL bOk
+  bOk = FALSE
+  WHILE NOT bOk
+    $OUT[nOutGabelZu] = FALSE
+    $OUT[nOutGabelAuf] = TRUE
+    bOk = WarteEin(nInGabelAuf)
+    IF NOT bOk THEN
+      Meld_Quit(30)
+    ENDIF
+  ENDWHILE
+END
+
+DEF GabelZu( )
+  DECL BOOL bOk
+  bOk = FALSE
+  WHILE NOT bOk
+    $OUT[nOutGabelAuf] = FALSE
+    $OUT[nOutGabelZu] = TRUE
+    bOk = WarteEin(nInGabelZu)
+    IF NOT bOk THEN
+      Meld_Quit(31)
+    ENDIF
+  ENDWHILE
+END
+
+DEF NiederhalterAb( )
+  ; keine Endlage unten: Niederhalter liegt auf dem Sack auf
+  $OUT[nOutNiederAb] = TRUE
+  WAIT SEC rNiederZeit
+END
+
+DEF NiederhalterAuf( )
+  DECL BOOL bOk
+  bOk = FALSE
+  WHILE NOT bOk
+    $OUT[nOutNiederAb] = FALSE
+    bOk = WarteEin(nInNiederOben)
+    IF NOT bOk THEN
+      Meld_Quit(32)
+    ENDIF
+  ENDWHILE
+END
+
+;=====================================================================
+; Auf Eingang warten mit Zeitueberwachung (nTimeoutMs)
+; Rueckgabe TRUE = Eingang gekommen, FALSE = Zeit abgelaufen
+;=====================================================================
+DEFFCT BOOL WarteEin(nEingang:IN)
+  DECL INT nEingang
+  $TIMER_STOP[nTimer] = TRUE
+  $TIMER[nTimer] = -nTimeoutMs
+  $TIMER_STOP[nTimer] = FALSE
+  WAIT FOR $IN[nEingang] OR $TIMER_FLAG[nTimer]
+  $TIMER_STOP[nTimer] = TRUE
+  RETURN $IN[nEingang]
+ENDFCT
+
+;=====================================================================
+; Meldungen (KrlMsg)
+;=====================================================================
+DEF Meld_Quit(nNr:IN)
+  ; Quittiermeldung, wartet bis quittiert
+  DECL INT nNr
+  DECL INT nHandle
+  DECL KrlMsg_T Msg
+  DECL KrlMsgPar_T Par[3]
+  DECL KrlMsgOpt_T Opt
+
+  MeldText(nNr, Msg)
+  Par[1] = {Par_Type #EMPTY}
+  Par[2] = {Par_Type #EMPTY}
+  Par[3] = {Par_Type #EMPTY}
+  Opt = {VL_Stop TRUE, Clear_P_Reset TRUE, Clear_P_SAW FALSE, Log_to_DB TRUE}
+  nHandle = Set_KrlMsg(#QUIT, Msg, Par[], Opt)
+  IF nHandle > 0 THEN
+    WHILE Exists_KrlMsg(nHandle)
+      WAIT SEC 0.1
+    ENDWHILE
+  ENDIF
+END
+
+DEF Meld_Status(nNr:IN)
+  ; Zustandsmeldung, bleibt bis Meld_Loeschen()
+  DECL INT nNr
+  DECL KrlMsg_T Msg
+  DECL KrlMsgPar_T Par[3]
+  DECL KrlMsgOpt_T Opt
+
+  Meld_Loeschen()
+  MeldText(nNr, Msg)
+  Par[1] = {Par_Type #EMPTY}
+  Par[2] = {Par_Type #EMPTY}
+  Par[3] = {Par_Type #EMPTY}
+  Opt = {VL_Stop TRUE, Clear_P_Reset TRUE, Clear_P_SAW FALSE, Log_to_DB FALSE}
+  nMeldHandle = Set_KrlMsg(#STATE, Msg, Par[], Opt)
+END
+
+DEF Meld_Hinweis(nNr:IN)
+  ; Hinweismeldung, ohne Warten
+  DECL INT nNr
+  DECL INT nHandle
+  DECL KrlMsg_T Msg
+  DECL KrlMsgPar_T Par[3]
+  DECL KrlMsgOpt_T Opt
+
+  MeldText(nNr, Msg)
+  Par[1] = {Par_Type #EMPTY}
+  Par[2] = {Par_Type #EMPTY}
+  Par[3] = {Par_Type #EMPTY}
+  Opt = {VL_Stop FALSE, Clear_P_Reset TRUE, Clear_P_SAW FALSE, Log_to_DB FALSE}
+  nHandle = Set_KrlMsg(#NOTIFY, Msg, Par[], Opt)
+END
+
+DEF Meld_Loeschen( )
+  DECL BOOL bOk
+  IF nMeldHandle > 0 THEN
+    bOk = Clear_KrlMsg(nMeldHandle)
+  ENDIF
+  nMeldHandle = 0
+END
+
+DEF MeldText(nNr:IN, Msg:OUT)
+  DECL INT nNr
+  DECL KrlMsg_T Msg
+  SWITCH nNr
+  CASE 1
+    Msg = {Modul[] "Palettierung", Nr 1, Msg_txt[] "Werkzeug (TOOL_DATA) nicht vermessen - Programm angehalten"}
+  CASE 2
+    Msg = {Modul[] "Palettierung", Nr 2, Msg_txt[] "Basis Palette nicht vermessen - Programm angehalten"}
+  CASE 3
+    Msg = {Modul[] "Palettierung", Nr 3, Msg_txt[] "Basis Aufnahme nicht vermessen - Programm angehalten"}
+  CASE 4
+    Msg = {Modul[] "Palettierung", Nr 4, Msg_txt[] "Sack im Greifer erkannt - Zyklus beginnt mit Ablage"}
+  CASE 5
+    Msg = {Modul[] "Palettierung", Nr 5, Msg_txt[] "Lagenparameter unzulaessig (nLagen / nSackProLage)"}
+  CASE 10
+    Msg = {Modul[] "Palettierung", Nr 10, Msg_txt[] "Warte auf Sack an der Aufnahme"}
+  CASE 11
+    Msg = {Modul[] "Palettierung", Nr 11, Msg_txt[] "Warte auf Freigabe leere Palette"}
+  CASE 12
+    Msg = {Modul[] "Palettierung", Nr 12, Msg_txt[] "Palette voll - warte auf Palettenwechsel"}
+  CASE 20
+    Msg = {Modul[] "Palettierung", Nr 20, Msg_txt[] "Kein Sack im Greifer - Quittieren: erneut greifen"}
+  CASE 21
+    Msg = {Modul[] "Palettierung", Nr 21, Msg_txt[] "Sack verloren - Quittieren: naechster Sack"}
+  CASE 30
+    Msg = {Modul[] "Palettierung", Nr 30, Msg_txt[] "Gabel nicht offen - Quittieren: wiederholen"}
+  CASE 31
+    Msg = {Modul[] "Palettierung", Nr 31, Msg_txt[] "Gabel nicht geschlossen - Quittieren: wiederholen"}
+  CASE 32
+    Msg = {Modul[] "Palettierung", Nr 32, Msg_txt[] "Niederhalter nicht oben - Quittieren: wiederholen"}
+  DEFAULT
+    Msg = {Modul[] "Palettierung", Nr 99, Msg_txt[] "Unbekannte Meldung"}
+  ENDSWITCH
+END
+</script>
+<script type="text/plain" id="krl-dat">
+&ACCESS RVP
+&REL 1
+&PARAM TEMPLATE = C:\KRC\Roboter\Template\vorgabe
+&PARAM EDITMASK = *
+DEFDAT  Palettierung
+;=====================================================================
+; Datenliste zu Palettierung.src
+; Saecke 600 x 400 x 200 mm  ->  Europalette 1200 x 800 x 144 mm
+; 4 Lagen x 4 Saecke = 16 Saecke je Palette
+;---------------------------------------------------------------------
+; Masse in mm, Winkel in Grad, CP-Geschwindigkeiten in m/s
+;
+; Palettenbasis (BASE_DATA[nBasePal], 3-Punkt-Methode):
+;   Ursprung = Ecke Palettenoberkante, X entlang 1200-Kante,
+;   Y entlang 800-Kante, Z nach oben
+; Aufnahmebasis (BASE_DATA[nBasePick]):
+;   Ursprung = Ecke Sack am Anschlag auf Rollenoberkante,
+;   X in Foerderrichtung entgegen (Sacklaenge), Y = Sackbreite, Z oben
+;
+; Die Layout-Frames fBasisPal / fBasisPick entsprechen dem Zellenlayout
+; der Web-Simulation. Sie werden nur verwendet, wenn nBasePal = 0 bzw.
+; nBasePick = 0 ist (z.B. Offline-Test in OfficeLite / KUKA.Sim).
+;=====================================================================
+
+;--- Werkzeug / Basen -------------------------------------------------
+DECL INT nTool=1               ; TOOL_DATA[1] = Sackgabelgreifer, TCP = Sackmitte
+DECL INT nBasePal=1            ; BASE_DATA[1] = Palette  (0 = fBasisPal)
+DECL INT nBasePick=2           ; BASE_DATA[2] = Aufnahme (0 = fBasisPick)
+DECL FRAME fBasisPal={X 1600.0,Y -1300.0,Z 144.0,A 0.0,B 0.0,C 0.0}
+DECL FRAME fBasisPick={X 1950.0,Y 450.0,Z 700.0,A 0.0,B 0.0,C 0.0}
+DECL REAL rOriB=0.0            ; Werkzeugorientierung B (Flansch nach unten)
+DECL REAL rOriC=180.0          ; Werkzeugorientierung C
+
+;--- Lastdaten (Platzhalter! mit KUKA.LoadDataDetermination pruefen) --
+DECL LOAD ldLeer={M 95.0,CM {X 0.0,Y 0.0,Z 230.0,A 0.0,B 0.0,C 0.0},J {X 9.0,Y 6.0,Z 12.0}}
+DECL LOAD ldVoll={M 115.0,CM {X 0.0,Y 0.0,Z 270.0,A 0.0,B 0.0,C 0.0},J {X 11.0,Y 8.0,Z 14.0}}
+
+;--- Sack / Palette ---------------------------------------------------
+DECL REAL rSackL=600.0         ; Sacklaenge
+DECL REAL rSackB=400.0         ; Sackbreite
+DECL REAL rSackH=200.0         ; Sackhoehe (Nennmass)
+DECL REAL rLagenH=200.0        ; effektive Lagenhoehe (Sack setzt sich -> ggf. kleiner)
+DECL REAL rPalZ0=0.0           ; Z der Palettenoberkante in der Palettenbasis
+DECL INT nLagen=4              ; Anzahl Lagen
+DECL INT nSackProLage=4        ; Saecke je Lage (max. 8)
+
+;--- Lagenmuster ------------------------------------------------------
+; Muster 1 = ungerade Lagen (1,3), Muster 2 = gerade Lagen (2,4)
+; X,Y = Sackmitte in der Palettenbasis, A = Drehung um Z
+; VX,VY = Richtung Anfahrversatz (-1/0/+1): der Sack kommt schraeg von
+;         aussen und wird an die bereits liegenden Saecke angelegt
+; Reihenfolge: zuerst die Saecke auf der von der Aufnahme abgewandten
+; Seite, damit nie ueber bereits liegende Saecke der Lage gefahren wird
+STRUC SackPos_T REAL X,Y,A,VX,VY
+DECL SackPos_T Muster[2,8]
+Muster[1,1]={X 300.0,Y 200.0,A 0.0,VX -1.0,VY -1.0}
+Muster[1,2]={X 900.0,Y 200.0,A 0.0,VX 1.0,VY -1.0}
+Muster[1,3]={X 300.0,Y 600.0,A 0.0,VX -1.0,VY 1.0}
+Muster[1,4]={X 900.0,Y 600.0,A 0.0,VX 1.0,VY 1.0}
+Muster[2,1]={X 900.0,Y 200.0,A 180.0,VX 1.0,VY -1.0}
+Muster[2,2]={X 300.0,Y 200.0,A 180.0,VX -1.0,VY -1.0}
+Muster[2,3]={X 900.0,Y 600.0,A 180.0,VX 1.0,VY 1.0}
+Muster[2,4]={X 300.0,Y 600.0,A 180.0,VX -1.0,VY 1.0}
+
+;--- Aufnahme (Koordinaten in der Aufnahmebasis) -----------------------
+DECL REAL rPickX=300.0         ; Sackmitte X
+DECL REAL rPickY=200.0         ; Sackmitte Y
+DECL REAL rPickZ=100.0         ; Sackmitte Z (Rollenoberkante + rSackH/2)
+DECL REAL rPickA=0.0           ; Drehung um Z
+DECL REAL rPickTief=-15.0      ; Gabel faehrt so weit unter den Sack (zwischen die Rollen)
+DECL REAL rPickVorZ=60.0       ; Vorposition ueber Aufnahme (ab hier langsam)
+DECL REAL rPickUeberZ=450.0    ; Ueberfahrhoehe ueber Aufnahme
+
+;--- Ablage -----------------------------------------------------------
+DECL REAL rAblageZ=15.0        ; Gabel oeffnet so hoch ueber der Endlage
+DECL REAL rVorXY=40.0          ; Anfahrversatz seitlich
+DECL REAL rVorZ=60.0           ; Anfahrversatz oben (ab hier langsam)
+DECL REAL rUeberZ=350.0        ; Ueberfahrhoehe ueber der Ablage
+
+;--- Geschwindigkeit / Beschleunigung / Ueberschleifen ----------------
+DECL REAL rVelPTP=100.0        ; PTP-Geschwindigkeit [%]
+DECL REAL rAccPTP=100.0        ; PTP-Beschleunigung [%]
+DECL REAL rVelCP=2.0           ; LIN Freifahrt [m/s]
+DECL REAL rVelCPLangsam=0.4    ; LIN Anfahrt Aufnahme / Ablage [m/s]
+DECL REAL rAccCP=100.0         ; CP-Beschleunigung [%]
+DECL INT nApoPTP=50            ; Ueberschleifen PTP [%]
+DECL REAL rApoDis=80.0         ; Ueberschleifen LIN [mm]
+
+;--- Ein-/Ausgaenge (an E/A-Konfiguration in WorkVisual anpassen) -----
+DECL INT nInSackDa=17          ; E: Sack an Aufnahme bereit (Lichtschranke Anschlag)
+DECL INT nInPalBereit=18       ; E: leere Palette in Position, Palettierung freigegeben
+DECL INT nInGabelAuf=19        ; E: Gabel offen (Endlage)
+DECL INT nInGabelZu=20         ; E: Gabel geschlossen (Endlage)
+DECL INT nInNiederOben=21      ; E: Niederhalter oben (Endlage)
+DECL INT nInSackImGr=22        ; E: Sack im Greifer (Sensor)
+DECL INT nInZyklEnde=23        ; E: Zyklusende angewaehlt
+DECL INT nOutGabelAuf=17       ; A: Gabel oeffnen
+DECL INT nOutGabelZu=18        ; A: Gabel schliessen
+DECL INT nOutNiederAb=19       ; A: Niederhalter ab
+DECL INT nOutSackEntn=20       ; A: Sack entnommen -> Foerderer gibt naechsten Sack frei
+DECL INT nOutPalVoll=21        ; A: Palette voll -> Palettenwechsel
+DECL INT nTimeoutMs=3000       ; Ueberwachungszeit Greifer-Endlagen [ms]
+DECL INT nTimer=10             ; verwendeter $TIMER
+DECL REAL rNiederZeit=0.3      ; Zeit Niederhalter ab [s]
+
+;--- Zaehler / Status (remanent, bleiben bei Programmabbruch erhalten) -
+DECL INT nLage=1               ; als naechstes zu belegende Lage
+DECL INT nSack=1               ; als naechstes abzulegender Sack in der Lage
+DECL INT nPalGesamt=0          ; Anzahl fertiger Paletten (Statistik)
+DECL BOOL bSackImGr=FALSE      ; Sack im Greifer (Programmzustand)
+DECL BOOL bEnde=FALSE          ; Zyklusende erkannt
+DECL INT nMeldHandle=0         ; Handle der aktuellen Zustandsmeldung
+
+;--- berechnete Zielpunkte (Weltkoordinaten, TCP = Sackmitte) ----------
+DECL FRAME fPickUeber={X 0.0,Y 0.0,Z 0.0,A 0.0,B 0.0,C 0.0}
+DECL FRAME fPickVor={X 0.0,Y 0.0,Z 0.0,A 0.0,B 0.0,C 0.0}
+DECL FRAME fPick={X 0.0,Y 0.0,Z 0.0,A 0.0,B 0.0,C 0.0}
+DECL FRAME fUeber={X 0.0,Y 0.0,Z 0.0,A 0.0,B 0.0,C 0.0}
+DECL FRAME fVor={X 0.0,Y 0.0,Z 0.0,A 0.0,B 0.0,C 0.0}
+DECL FRAME fAblage={X 0.0,Y 0.0,Z 0.0,A 0.0,B 0.0,C 0.0}
+DECL FRAME fAbheben={X 0.0,Y 0.0,Z 0.0,A 0.0,B 0.0,C 0.0}
+ENDDAT
+</script>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+const D2R = Math.PI / 180, R2D = 180 / Math.PI;
+const $ = (s) => document.querySelector(s);
+const wrap180 = (a) => { a = ((a + 180) % 360 + 360) % 360 - 180; return a; };
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const approach = (x, t, step) => (Math.abs(t - x) <= step ? t : x + Math.sign(t - x) * step);
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* =====================================================================
+   Robotermodell: Palettierkinematik (Parallelogramm, Flansch waagerecht)
+   Maße angenähert an KR QUANTEC PA mit 3195 mm Reichweite
+   Gelenke q = [A1, A2, A3, A6] in KUKA-Konvention (Grad)
+   ===================================================================== */
+const ROB = {
+  H1: 1045, A1OFF: 330, L2: 1350, L3: 1515, D6: 250, TOOLZ: 350,
+  vmax: [105, 107, 114, 292],
+  vOri: 250,
+  tAccPTP: 0.42, tAccCP: 0.30,
+  lim: [[-185, 185], [-130, 20], [-10, 170], [-350, 350]],
+};
+const HOME_Q = [0, -90, 90, 0];
+const PARK_Q = [-35, -75, 105, 20];
+
+function fk(q) {
+  const yaw = -q[0] * D2R, thu = -q[1] * D2R, thf = thu - q[2] * D2R;
+  const r = ROB.A1OFF + ROB.L2 * Math.cos(thu) + ROB.L3 * Math.cos(thf);
+  const zw = ROB.H1 + ROB.L2 * Math.sin(thu) + ROB.L3 * Math.sin(thf);
+  return { x: r * Math.cos(yaw), y: r * Math.sin(yaw), z: zw - ROB.D6 - ROB.TOOLZ, a: -q[0] - q[3] };
+}
+function nearAngle(x, ref) { return x + 360 * Math.round((ref - x) / 360); }
+function ik(p, ref) {
+  const yaw = Math.atan2(p.y, p.x), r = Math.hypot(p.x, p.y);
+  const rr = r - ROB.A1OFF, zz = p.z + ROB.TOOLZ + ROB.D6 - ROB.H1;
+  const d = Math.hypot(rr, zz);
+  if (r < 400 || d > ROB.L2 + ROB.L3 - 1 || d < Math.abs(ROB.L2 - ROB.L3) + 1) return null;
+  const phi = Math.atan2(zz, rr);
+  const beta = Math.acos(clamp((d * d + ROB.L2 * ROB.L2 - ROB.L3 * ROB.L3) / (2 * ROB.L2 * d), -1, 1));
+  const thu = phi + beta;
+  const ex = ROB.L2 * Math.cos(thu), ez = ROB.L2 * Math.sin(thu);
+  const thf = Math.atan2(zz - ez, rr - ex);
+  let A1 = -yaw * R2D;
+  if (ref) A1 = nearAngle(A1, ref[0]);
+  if (A1 < ROB.lim[0][0]) A1 += 360; else if (A1 > ROB.lim[0][1]) A1 -= 360;
+  const A2 = -thu * R2D, A3 = (thu - thf) * R2D;
+  const a6raw = -A1 - p.a;
+  const ref6 = ref ? ref[3] : 0;
+  let A6 = null, best = Infinity;
+  for (const k of [-1, 0, 1]) {
+    const c = nearAngle(a6raw, ref6) + 360 * k;
+    if (c >= ROB.lim[3][0] && c <= ROB.lim[3][1] && Math.abs(c - ref6) < best) { best = Math.abs(c - ref6); A6 = c; }
+  }
+  const q = [A1, A2, A3, A6];
+  if (A6 === null) return null;
+  for (let i = 0; i < 3; i++) if (q[i] < ROB.lim[i][0] || q[i] > ROB.lim[i][1]) return null;
+  return q;
+}
+const lerp4 = (a, b, s) => [a[0] + (b[0] - a[0]) * s, a[1] + (b[1] - a[1]) * s, a[2] + (b[2] - a[2]) * s, a[3] + (b[3] - a[3]) * s];
+
+/* =====================================================================
+   KRL-Quellen: SRC (Satzzeiger) und DAT (Parameter)
+   ===================================================================== */
+const SRC_TEXT = $('#krl-src').textContent.replace(/^\s*\n/, '').replace(/\s+$/, '');
+const DAT_ORIG = $('#krl-dat').textContent.replace(/^\s*\n/, '').replace(/\s+$/, '');
+const SRC_LINES = SRC_TEXT.split(/\r?\n/);
+
+const SUBS = {};
+(function scanSubs() {
+  let cur = null;
+  SRC_LINES.forEach((l, i) => {
+    const m = l.match(/^\s*(?:GLOBAL\s+)?DEF(?:FCT\s+\w+)?\s+(\w+)\s*\(/i);
+    if (m) { cur = m[1]; SUBS[cur] = [i, SRC_LINES.length - 1]; return; }
+    if (cur && /^\s*(END|ENDFCT)\s*$/i.test(l)) { SUBS[cur][1] = i; cur = null; }
+  });
+})();
+const lnCache = new Map();
+function ln(sub, snip, nth = 1) {
+  const key = sub + '|' + snip + '|' + nth;
+  if (lnCache.has(key)) return lnCache.get(key);
+  const rg = SUBS[sub];
+  let res = -1;
+  if (rg) {
+    let c = 0;
+    const exact = snip.startsWith('=');
+    const s = exact ? snip.slice(1) : snip;
+    for (let i = rg[0]; i <= rg[1]; i++) {
+      const t = SRC_LINES[i].trim();
+      if (t.startsWith(';')) continue;
+      if (exact ? t === s : t.includes(s)) { if (++c === nth) { res = i; break; } }
+    }
+  }
+  if (res < 0) { console.warn('KRL-Zeile nicht gefunden:', sub, snip, nth); res = rg ? rg[0] : 0; }
+  lnCache.set(key, res);
+  return res;
+}
+const MSG_TEXT = {};
+SRC_TEXT.replace(/CASE\s+(\d+)\s*\r?\n\s*Msg\s*=\s*\{[^}]*Msg_txt\[\]\s*"([^"]*)"/g, (m, n, t) => { MSG_TEXT[+n] = t; return m; });
+
+function parseValue(s) {
+  s = s.trim();
+  if (/^TRUE$/i.test(s)) return true;
+  if (/^FALSE$/i.test(s)) return false;
+  if (/^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/.test(s)) return parseFloat(s);
+  if (s.startsWith('{') && s.endsWith('}')) {
+    const inner = s.slice(1, -1);
+    if (/[{}]/.test(inner)) return undefined;
+    const o = {};
+    for (const part of inner.split(',')) {
+      const mm = part.trim().match(/^(\w+)\s+([-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)$/);
+      if (!mm) return undefined;
+      o[mm[1]] = parseFloat(mm[2]);
+    }
+    return o;
+  }
+  return undefined;
+}
+const DAT_REQ = ['fBasisPal', 'fBasisPick', 'rOriB', 'rOriC', 'rSackL', 'rSackB', 'rSackH', 'rLagenH', 'rPalZ0', 'nLagen', 'nSackProLage',
+  'rPickX', 'rPickY', 'rPickZ', 'rPickA', 'rPickTief', 'rPickVorZ', 'rPickUeberZ', 'rAblageZ', 'rVorXY', 'rVorZ', 'rUeberZ',
+  'rVelPTP', 'rAccPTP', 'rVelCP', 'rVelCPLangsam', 'rAccCP', 'nApoPTP', 'rApoDis',
+  'nInSackDa', 'nInPalBereit', 'nInGabelAuf', 'nInGabelZu', 'nInNiederOben', 'nInSackImGr', 'nInZyklEnde',
+  'nOutGabelAuf', 'nOutGabelZu', 'nOutNiederAb', 'nOutSackEntn', 'nOutPalVoll', 'nTimeoutMs', 'rNiederZeit', 'nLage', 'nSack', 'nPalGesamt'];
+function parseDat(text) {
+  const D = { Muster: {} }, errs = [];
+  text.split(/\r?\n/).forEach((raw, i) => {
+    const line = raw.replace(/;.*$/, '').trim();
+    if (!line || line.startsWith('&') || /^(DEFDAT|ENDDAT|STRUC)\b/i.test(line)) return;
+    const m = line.match(/^(?:DECL\s+(?:GLOBAL\s+)?(\w+)\s+)?(\w+)\s*(?:\[\s*(\d+)\s*(?:,\s*(\d+)\s*)?\])?\s*(?:=\s*(.+))?$/i);
+    if (!m) { errs.push(`Zeile ${i + 1}: nicht lesbar`); return; }
+    const [, type, name, i1, i2, val] = m;
+    if (val === undefined) return;
+    let v;
+    if (type && /^LOAD$/i.test(type)) { const mm = val.match(/\bM\s+([-+]?[\d.]+)/); v = { M: mm ? +mm[1] : 0 }; }
+    else v = parseValue(val);
+    if (v === undefined) { errs.push(`Zeile ${i + 1}: Wert von ${name} nicht lesbar`); return; }
+    if (i1 !== undefined) { if (name === 'Muster' && i2 !== undefined) (D.Muster[+i1] ??= {})[+i2] = v; return; }
+    D[name] = v;
+  });
+  for (const k of DAT_REQ) if (D[k] === undefined) errs.push(`${k} fehlt`);
+  if (!errs.length) {
+    if (D.nLagen < 1 || D.nLagen > 12) errs.push('nLagen muss zwischen 1 und 12 liegen');
+    if (D.nSackProLage < 1 || D.nSackProLage > 8) errs.push('nSackProLage muss zwischen 1 und 8 liegen');
+    for (const mu of [1, 2]) for (let s = 1; s <= D.nSackProLage; s++) {
+      const e = D.Muster[mu]?.[s];
+      if (!e || ['X', 'Y', 'A', 'VX', 'VY'].some((k) => typeof e[k] !== 'number')) errs.push(`Muster[${mu},${s}] fehlt oder unvollständig`);
+    }
+    if (D.rVelCP <= 0 || D.rVelCPLangsam <= 0 || D.rVelPTP <= 0) errs.push('Geschwindigkeiten müssen größer 0 sein');
+  }
+  return { D, errs };
+}
+
+/* =====================================================================
+   Simulationszustand
+   ===================================================================== */
+let D = null;
+let datText = DAT_ORIG;
+const V = { nLage: 1, nSack: 1, nPalGesamt: 0, bSackImGr: false, bEnde: false, nMus: 1 };
+const S = { velCP: 2, velPTP: 100, accPTP: 100, accCP: 100, apoPTP: 50, apoDis: 80, load: 'leer' };
+const F = {};
+const IO = {
+  inp: { SackDa: false, PalBereit: false, GabelAuf: false, GabelZu: false, NiederOben: true, SackImGr: false, ZyklEnde: false },
+  out: { GabelAuf: false, GabelZu: false, NiederAb: false, SackEntn: false, PalVoll: false },
+};
+const STATS = { t: 0, pickTimes: [], placed: 0 };
+let ROBQ = PARK_Q.slice(), TCP = fk(ROBQ);
+let running = false, speed = 1, stepMode = false, stepLine = -1;
+let quitAcked = false, programEnded = false;
+let markersDirty = true;
+
+function setOut(name, val) {
+  if (name === 'SackEntn' && val && !IO.out.SackEntn) {
+    STATS.pickTimes.push(STATS.t);
+    if (STATS.pickTimes.length > 9) STATS.pickTimes.shift();
+  }
+  IO.out[name] = val;
+}
+
+function baseFrame(st) { return st === 1 ? D.fBasisPal : D.fBasisPick; }
+function baseToWorld(B, x, y, z) {
+  const A = B.A * D2R, Bb = B.B * D2R, C = B.C * D2R;
+  const ca = Math.cos(A), sa = Math.sin(A), cb = Math.cos(Bb), sb = Math.sin(Bb), cc = Math.cos(C), sc = Math.sin(C);
+  return {
+    x: B.X + (ca * cb) * x + (ca * sb * sc - sa * cc) * y + (ca * sb * cc + sa * sc) * z,
+    y: B.Y + (sa * cb) * x + (sa * sb * sc + ca * cc) * y + (sa * sb * cc - ca * sc) * z,
+    z: B.Z + (-sb) * x + (cb * sc) * y + (cb * cc) * z,
+  };
+}
+// Spiegel der KRL-Funktion ZielWelt (B/C fest, A = Basisdrehung + Sackdrehung)
+function zielWelt(st, x, y, z, a) {
+  const B = baseFrame(st);
+  const p = baseToWorld(B, x, y, z);
+  return { x: p.x, y: p.y, z: p.z, a: wrap180(B.A + a) };
+}
+
+/* =====================================================================
+   Programm: Nachbildung von Palettierung.src als Generator
+   jede yield-Anweisung entspricht einem KRL-Satz (Zeile im Satzzeiger)
+   ===================================================================== */
+const cmd = {
+  ptp: (t, approx, line) => ({ k: 'PTP', target: t, approx, line, vel: S.velPTP, acc: S.accPTP, apo: approx ? { kind: 'PTP', val: S.apoPTP } : null }),
+  ptpAx: (q, line) => ({ k: 'PTPAX', q, approx: false, line, vel: S.velPTP, acc: S.accPTP }),
+  lin: (t, approx, line, trig) => ({ k: 'LIN', target: t, approx, line, vel: S.velCP, acc: S.accCP, trig, apo: approx ? { kind: 'DIS', val: S.apoDis } : null }),
+  out: (name, val, line) => ({ k: 'OUT', name, val, line }),
+  sync: (line) => ({ k: 'SYNC', line }),
+  wait: (fn, line) => ({ k: 'WAIT', fn, line }),
+  waitT: (fn, timeout, line) => ({ k: 'WAITT', fn, timeout, line }),
+  waitSec: (t, line) => ({ k: 'WSEC', t, line }),
+  msg: (kind, nr, line) => ({ k: 'MSG', kind, nr, line }),
+  msgClr: (line) => ({ k: 'MSGCLR', line }),
+  quit: (nr, line) => ({ k: 'QUIT', nr, line }),
+  end: (line) => ({ k: 'END', line }),
+};
+
+function* P_main() {
+  yield* P_PalInit();
+  yield cmd.ptpAx(HOME_Q, ln('Palettierung', 'PTP XHOME', 1));
+  V.bEnde = false;
+  while (!V.bEnde) {
+    if (V.nLage > D.nLagen) yield* P_PaletteWechsel();
+    if (!V.bSackImGr) yield* P_SackAufnehmen();
+    if (V.bSackImGr) yield* P_SackAblegen();
+    V.bEnde = IO.inp.ZyklEnde;            // CONTINUE: Abfrage im Vorlauf
+  }
+  yield cmd.ptpAx(HOME_Q, ln('Palettierung', 'PTP XHOME', 2));
+  yield cmd.end(ln('Palettierung', '=END'));
+}
+function* P_PalInit() {
+  const sub = 'PalInit';
+  S.velPTP = D.rVelPTP; S.accPTP = D.rAccPTP; S.velCP = D.rVelCP; S.accCP = D.rAccCP;
+  S.apoPTP = D.nApoPTP; S.apoDis = D.rApoDis;
+  if (V.nLage < 1 || V.nSack < 1 || V.nSack > D.nSackProLage) { V.nLage = 1; V.nSack = 1; }
+  yield cmd.out('SackEntn', false, ln(sub, '$OUT[nOutSackEntn] = FALSE'));
+  yield cmd.out('PalVoll', false, ln(sub, '$OUT[nOutPalVoll] = FALSE'));
+  yield cmd.sync(ln(sub, 'bSackImGr = $IN[nInSackImGr]'));
+  V.bSackImGr = IO.inp.SackImGr;
+  if (V.bSackImGr) {
+    S.load = 'voll';
+    yield cmd.msg('notify', 4, ln(sub, 'Meld_Hinweis(4)'));
+  } else {
+    S.load = 'leer';
+    yield* P_GabelAuf();
+    yield* P_NiederhalterAuf();
+  }
+}
+function* P_SackAufnehmen() {
+  const sub = 'SackAufnehmen';
+  F.fPickUeber = zielWelt(2, D.rPickX, D.rPickY, D.rPickZ + D.rPickUeberZ, D.rPickA);
+  F.fPickVor = zielWelt(2, D.rPickX, D.rPickY, D.rPickZ + D.rPickVorZ, D.rPickA);
+  F.fPick = zielWelt(2, D.rPickX, D.rPickY, D.rPickZ + D.rPickTief, D.rPickA);
+  markersDirty = true;
+  S.velCP = D.rVelCP;
+  yield cmd.ptp(F.fPickUeber, false, ln(sub, 'PTP fPickUeber'));
+  yield cmd.out('SackEntn', false, ln(sub, '$OUT[nOutSackEntn] = FALSE'));
+  yield* P_GabelAuf();
+  yield* P_NiederhalterAuf();
+  yield cmd.sync(ln(sub, 'IF NOT $IN[nInSackDa] THEN'));
+  if (!IO.inp.SackDa) {
+    yield cmd.msg('state', 10, ln(sub, 'Meld_Status(10)'));
+    yield cmd.wait(() => IO.inp.SackDa || IO.inp.ZyklEnde, ln(sub, 'WAIT FOR $IN[nInSackDa] OR $IN[nInZyklEnde]'));
+    yield cmd.msgClr(ln(sub, 'Meld_Loeschen()'));
+    yield cmd.sync(ln(sub, 'IF NOT $IN[nInSackDa] THEN', 2));
+    if (!IO.inp.SackDa) return;
+  }
+  yield cmd.lin(F.fPickVor, true, ln(sub, 'LIN fPickVor C_DIS'));
+  S.velCP = D.rVelCPLangsam;
+  yield cmd.lin(F.fPick, false, ln(sub, '=LIN fPick'));
+  yield* P_GabelZu();
+  yield* P_NiederhalterAb();
+  yield cmd.sync(ln(sub, 'WHILE NOT $IN[nInSackImGr]'));
+  while (!IO.inp.SackImGr) {
+    yield cmd.quit(20, ln(sub, 'Meld_Quit(20)'));
+    yield* P_GabelAuf();
+    yield* P_NiederhalterAuf();
+    yield cmd.wait(() => IO.inp.SackDa, ln(sub, '=WAIT FOR $IN[nInSackDa]'));
+    yield* P_GabelZu();
+    yield* P_NiederhalterAb();
+    yield cmd.sync(ln(sub, 'WHILE NOT $IN[nInSackImGr]'));
+  }
+  V.bSackImGr = true;
+  S.load = 'voll';
+  S.velCP = D.rVelCP;
+  yield cmd.lin(F.fPickUeber, true, ln(sub, 'LIN fPickUeber C_DIS'), () => setOut('SackEntn', true));
+}
+function* P_SackAblegen() {
+  const sub = 'SackAblegen';
+  const nMus = (V.nLage % 2) === 1 ? 1 : 2;
+  const M = D.Muster[nMus][V.nSack];
+  const rX = M.X, rY = M.Y, rA = M.A, rVX = M.VX * D.rVorXY, rVY = M.VY * D.rVorXY;
+  const rZ = D.rPalZ0 + (V.nLage - 1) * D.rLagenH + 0.5 * D.rLagenH;
+  V.nMus = nMus;
+  F.fUeber = zielWelt(1, rX + rVX, rY + rVY, rZ + D.rUeberZ, rA);
+  F.fVor = zielWelt(1, rX + rVX, rY + rVY, rZ + D.rVorZ, rA);
+  F.fAblage = zielWelt(1, rX, rY, rZ + D.rAblageZ, rA);
+  F.fAbheben = zielWelt(1, rX, rY, rZ + D.rUeberZ, rA);
+  markersDirty = true;
+  const bPalOk = IO.inp.PalBereit;                // CONTINUE: Abfrage im Vorlauf
+  if (!bPalOk) {
+    yield cmd.msg('state', 11, ln(sub, 'Meld_Status(11)'));
+    yield cmd.wait(() => IO.inp.PalBereit, ln(sub, 'WAIT FOR $IN[nInPalBereit]'));
+    yield cmd.msgClr(ln(sub, 'Meld_Loeschen()'));
+  }
+  S.velCP = D.rVelCP;
+  yield cmd.ptp(F.fUeber, true, ln(sub, 'PTP fUeber C_PTP'));
+  yield cmd.lin(F.fVor, true, ln(sub, 'LIN fVor C_DIS'));
+  S.velCP = D.rVelCPLangsam;
+  yield cmd.lin(F.fAblage, false, ln(sub, 'LIN fAblage'));
+  yield cmd.sync(ln(sub, 'IF NOT $IN[nInSackImGr] THEN'));
+  if (!IO.inp.SackImGr) {
+    yield cmd.quit(21, ln(sub, 'Meld_Quit(21)'));
+    V.bSackImGr = false; S.load = 'leer'; S.velCP = D.rVelCP;
+    yield cmd.lin(F.fAbheben, false, ln(sub, '=LIN fAbheben'));
+    return;
+  }
+  yield* P_GabelAuf();
+  yield* P_NiederhalterAuf();
+  V.bSackImGr = false;
+  S.load = 'leer';
+  P_Weiterzaehlen();
+  S.velCP = D.rVelCP;
+  yield cmd.lin(F.fAbheben, true, ln(sub, 'LIN fAbheben C_DIS'));
+}
+function P_Weiterzaehlen() {
+  V.nSack += 1;
+  if (V.nSack > D.nSackProLage) { V.nSack = 1; V.nLage += 1; }
+}
+function* P_PaletteWechsel() {
+  const sub = 'PaletteWechsel';
+  yield cmd.ptpAx(HOME_Q, ln(sub, 'PTP XHOME'));
+  yield cmd.out('PalVoll', true, ln(sub, '$OUT[nOutPalVoll] = TRUE'));
+  yield cmd.msg('state', 12, ln(sub, 'Meld_Status(12)'));
+  yield cmd.wait(() => !IO.inp.PalBereit, ln(sub, 'WAIT FOR NOT $IN[nInPalBereit]'));
+  yield cmd.wait(() => IO.inp.PalBereit, ln(sub, 'WAIT FOR $IN[nInPalBereit]'));
+  yield cmd.out('PalVoll', false, ln(sub, '$OUT[nOutPalVoll] = FALSE'));
+  yield cmd.msgClr(ln(sub, 'Meld_Loeschen()'));
+  V.nPalGesamt += 1; V.nLage = 1; V.nSack = 1;
+}
+function* P_GabelAuf() {
+  const sub = 'GabelAuf';
+  let ok = false;
+  while (!ok) {
+    yield cmd.out('GabelZu', false, ln(sub, '$OUT[nOutGabelZu] = FALSE'));
+    yield cmd.out('GabelAuf', true, ln(sub, '$OUT[nOutGabelAuf] = TRUE'));
+    ok = yield cmd.waitT(() => IO.inp.GabelAuf, D.nTimeoutMs / 1000, ln('WarteEin', 'WAIT FOR'));
+    if (!ok) yield cmd.quit(30, ln(sub, 'Meld_Quit(30)'));
+  }
+}
+function* P_GabelZu() {
+  const sub = 'GabelZu';
+  let ok = false;
+  while (!ok) {
+    yield cmd.out('GabelAuf', false, ln(sub, '$OUT[nOutGabelAuf] = FALSE'));
+    yield cmd.out('GabelZu', true, ln(sub, '$OUT[nOutGabelZu] = TRUE'));
+    ok = yield cmd.waitT(() => IO.inp.GabelZu, D.nTimeoutMs / 1000, ln('WarteEin', 'WAIT FOR'));
+    if (!ok) yield cmd.quit(31, ln(sub, 'Meld_Quit(31)'));
+  }
+}
+function* P_NiederhalterAb() {
+  const sub = 'NiederhalterAb';
+  yield cmd.out('NiederAb', true, ln(sub, '$OUT[nOutNiederAb] = TRUE'));
+  yield cmd.waitSec(D.rNiederZeit, ln(sub, 'WAIT SEC rNiederZeit'));
+}
+function* P_NiederhalterAuf() {
+  const sub = 'NiederhalterAuf';
+  let ok = false;
+  while (!ok) {
+    yield cmd.out('NiederAb', false, ln(sub, '$OUT[nOutNiederAb] = FALSE'));
+    ok = yield cmd.waitT(() => IO.inp.NiederOben, D.nTimeoutMs / 1000, ln('WarteEin', 'WAIT FOR'));
+    if (!ok) yield cmd.quit(32, ln(sub, 'Meld_Quit(32)'));
+  }
+}
+
+/* =====================================================================
+   Interpreter: Hauptlauf / Vorlauf, PTP synchron, LIN kartesisch,
+   Ueberschleifen durch Ueberlagerung der Bewegungssaetze
+   ===================================================================== */
+function timing(tv, tAcc) {
+  if (tv <= 1e-6) return [0.02, 0.01];
+  if (tv >= tAcc) return [tv + tAcc, tAcc];
+  const T = 2 * Math.sqrt(tv * tAcc);
+  return [T, T / 2];
+}
+function prof(tau, T, ta) {
+  if (tau <= 0) return 0;
+  if (tau >= T) return 1;
+  const vp = 1 / (T - ta);
+  if (tau < ta) return 0.5 * vp / ta * tau * tau;
+  if (tau <= T - ta) return 0.5 * vp * ta + vp * (tau - ta);
+  const r = T - tau;
+  return 1 - 0.5 * vp / ta * r * r;
+}
+
+class Executor {
+  constructor(q) {
+    this.t = 0; this.segs = []; this.qRef = q.slice(); this.qPlan = q.slice();
+    this.pend = null; this.active = null; this.gen = null; this.resume = undefined;
+    this.done = true; this.failed = false; this.mainLine = -1; this.advLine = -1; this.curLine = -1;
+  }
+  start(genFn) { this.gen = genFn(); this.done = false; this.failed = false; programEnded = false; }
+  q() {
+    const q = this.qRef.slice();
+    for (const s of this.segs) {
+      const qs = s.f(clamp(this.t - s.t0, 0, s.T));
+      for (let i = 0; i < 4; i++) q[i] += qs[i] - s.qA[i];
+    }
+    return q;
+  }
+  step(h) {
+    this.t += h;
+    for (const s of this.segs) if (s.trig && !s.trigFired && this.t >= s.trigT) { s.trigFired = true; s.trig(); }
+    while (this.segs.length && this.t >= this.segs[0].t0 + this.segs[0].T) {
+      const s = this.segs.shift();
+      if (s.trig && !s.trigFired) { s.trigFired = true; s.trig(); }
+      for (let i = 0; i < 4; i++) this.qRef[i] += s.qB[i] - s.qA[i];
+    }
+    this.pump();
+    let ml = this.curLine;
+    for (const s of this.segs) if (s.t0 <= this.t) ml = s.line;
+    if (!this.segs.length && this.active) ml = this.active.line;
+    this.mainLine = ml;
+  }
+  pump() {
+    for (let guard = 0; guard < 64; guard++) {
+      if (this.failed) return;
+      if (this.active) { if (!this.active.tick()) return; this.active = null; continue; }
+      if (this.pend) {
+        if (this.segs.length) return;          // Vorlaufstopp: warten bis Roboter steht
+        const c = this.pend; this.pend = null;
+        this.active = this.begin(c);
+        continue;
+      }
+      const last = this.segs[this.segs.length - 1];
+      if (last && !(last.approx && !last.looked)) return;
+      if (this.done || !this.gen) return;
+      if (last) last.looked = true;
+      const r = this.gen.next(this.resume); this.resume = undefined;
+      if (r.done) { this.done = true; return; }
+      const c = r.value;
+      this.advLine = c.line;
+      if (c.k === 'PTP' || c.k === 'PTPAX' || c.k === 'LIN') this.plan(c, last);
+      else { if (last) last.approx = false; this.pend = c; }
+    }
+  }
+  plan(c, last) {
+    const qA = this.qPlan.slice();
+    let qB, f, T, ta, vmm = 0;
+    if (c.k === 'LIN') {
+      const pA = fk(qA), pB = c.target;
+      qB = ik(pB, qA);
+      if (!qB) return this.fail(c);
+      const dist = Math.hypot(pB.x - pA.x, pB.y - pA.y, pB.z - pA.z);
+      const da = wrap180(pB.a - pA.a);
+      vmm = Math.max(0.01, c.vel) * 1000;
+      [T, ta] = timing(Math.max(dist / vmm, Math.abs(da) / ROB.vOri), ROB.tAccCP * 100 / Math.max(1, c.acc));
+      f = (tau) => {
+        const s = prof(tau, T, ta);
+        const p = { x: pA.x + (pB.x - pA.x) * s, y: pA.y + (pB.y - pA.y) * s, z: pA.z + (pB.z - pA.z) * s, a: pA.a + da * s };
+        const ref = lerp4(qA, qB, s);
+        return ik(p, ref) || ref;
+      };
+    } else {
+      qB = c.k === 'PTPAX' ? c.q.slice() : ik(c.target, qA);
+      if (!qB) return this.fail(c);
+      let tv = 0;
+      for (let i = 0; i < 4; i++) tv = Math.max(tv, Math.abs(qB[i] - qA[i]) / (ROB.vmax[i] * Math.max(1, c.vel) / 100));
+      [T, ta] = timing(tv, ROB.tAccPTP * 100 / Math.max(1, c.acc));
+      f = (tau) => lerp4(qA, qB, prof(tau, T, ta));
+    }
+    let t0 = last ? last.t0 + last.T : this.t;
+    if (last && last.approx && last.apo) {
+      let ov = last.apo.kind === 'DIS' ? 2 * last.apo.val / Math.max(1, last.vmm) : (last.apo.val / 100) * 0.5 * Math.min(last.T, T);
+      ov = Math.min(ov, 0.5 * last.T, 0.5 * T);
+      t0 -= ov;
+      last.trigT = last.t0 + last.T - ov / 2;
+    }
+    t0 = Math.max(t0, this.t);
+    const seg = { t0, T, qA, qB, f, line: c.line, approx: !!c.approx, apo: c.apo, vmm, trig: c.trig, trigT: t0 + T, trigFired: false, looked: false, kind: c.k };
+    this.segs.push(seg);
+    this.qPlan = qB.slice();
+  }
+  fail(c) {
+    this.failed = true; this.curLine = c.line;
+    showMsg('error', 'Zielpunkt im Simulationsmodell nicht erreichbar – Parameter in der DAT prüfen', `Zeile ${c.line + 1}`);
+    running = false; syncPlay();
+  }
+  begin(c) {
+    this.curLine = c.line;
+    switch (c.k) {
+      case 'OUT': setOut(c.name, c.val); return null;
+      case 'SYNC': return null;
+      case 'MSG': showMsg(c.kind, MSG_TEXT[c.nr] || `Meldung ${c.nr}`, `Palettierung ${c.nr}`); return null;
+      case 'MSGCLR': clearMsg(); return null;
+      case 'WAIT': return { line: c.line, tick: () => c.fn() };
+      case 'WAITT': {
+        const t0 = this.t;
+        return { line: c.line, tick: () => {
+          if (c.fn()) { this.resume = true; return true; }
+          if (this.t - t0 >= c.timeout) { this.resume = false; return true; }
+          return false;
+        } };
+      }
+      case 'WSEC': { const t1 = this.t + c.t; return { line: c.line, tick: () => this.t >= t1 }; }
+      case 'QUIT': quitAcked = false; showMsg('quit', MSG_TEXT[c.nr] || `Meldung ${c.nr}`, `Palettierung ${c.nr}`, true); return { line: c.line, tick: () => quitAcked };
+      case 'END': this.done = true; programEnded = true; showMsg('notify', 'Programm beendet (Zyklusende) – Zähler bleiben erhalten', 'Start = Programm neu anwählen'); running = false; syncPlay(); return null;
+    }
+    return null;
+  }
+}
+let EX = new Executor(PARK_Q);
+
+/* =====================================================================
+   3D-Szene (Weltkoordinaten in mm, Z oben)
+   ===================================================================== */
+const viewport = $('#viewport');
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: false });
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+viewport.prepend(renderer.domElement);
+const labelRenderer = new CSS2DRenderer({ element: $('#labels') });
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(40, 1, 0.05, 80);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.12;
+controls.maxPolarAngle = Math.PI * 0.495;
+controls.minDistance = 1.2;
+controls.maxDistance = 22;
+
+scene.add(new THREE.HemisphereLight(0xf2f5f8, 0x6b6257, 1.05));
+const sun = new THREE.DirectionalLight(0xffffff, 1.65);
+sun.position.set(3.5, 9, 4.5);
+sun.target.position.set(1.6, 0, 0);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -5, right: 5, top: 5, bottom: -5, near: 1, far: 25 });
+sun.shadow.bias = -0.0004;
+scene.add(sun, sun.target);
+
+const world = new THREE.Group();
+world.rotation.x = -Math.PI / 2;
+world.scale.setScalar(0.001);
+scene.add(world);
+
+const mat = {
+  orange: new THREE.MeshStandardMaterial({ color: 0xe8761e, roughness: 0.5, metalness: 0.08 }),
+  dark: new THREE.MeshStandardMaterial({ color: 0x33383e, roughness: 0.6, metalness: 0.3 }),
+  steel: new THREE.MeshStandardMaterial({ color: 0xa9b1b9, roughness: 0.35, metalness: 0.7 }),
+  grip: new THREE.MeshStandardMaterial({ color: 0x59626b, roughness: 0.5, metalness: 0.45 }),
+  yellow: new THREE.MeshStandardMaterial({ color: 0xe1b42b, roughness: 0.55 }),
+  wood: new THREE.MeshStandardMaterial({ color: 0xc9a46a, roughness: 0.85 }),
+  woodDark: new THREE.MeshStandardMaterial({ color: 0xa9844f, roughness: 0.9 }),
+  frame: new THREE.MeshStandardMaterial({ color: 0x4f6a7f, roughness: 0.55, metalness: 0.35 }),
+  roller: new THREE.MeshStandardMaterial({ color: 0xb6bec5, roughness: 0.3, metalness: 0.8 }),
+  valve: new THREE.MeshStandardMaterial({ color: 0x8c6a3d, roughness: 0.9 }),
+  print: new THREE.MeshStandardMaterial({ color: 0xbba57d, roughness: 0.9 }),
+  marking: new THREE.MeshBasicMaterial({ color: 0xe0b020 }),
+};
+const floorMat = new THREE.MeshStandardMaterial({ color: 0xc5ccd3, roughness: 0.95 });
+
+function shade(m) { m.castShadow = true; m.receiveShadow = true; return m; }
+function box(w, d, h, m, x = 0, y = 0, z = 0) { const o = shade(new THREE.Mesh(new THREE.BoxGeometry(w, d, h), m)); o.position.set(x, y, z); return o; }
+function cylZ(r, h, m, x = 0, y = 0, z = 0) { const g = new THREE.CylinderGeometry(r, r, h, 32); g.rotateX(Math.PI / 2); const o = shade(new THREE.Mesh(g, m)); o.position.set(x, y, z); return o; }
+function cylY(r, h, m, x = 0, y = 0, z = 0) { const o = shade(new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 32), m)); o.position.set(x, y, z); return o; }
+function linkBox(w, h, m) { const g = new THREE.BoxGeometry(1, w, h); g.translate(0.5, 0, 0); return shade(new THREE.Mesh(g, m)); }
+function linkCyl(r, m) { const g = new THREE.CylinderGeometry(r, r, 1, 20); g.rotateZ(-Math.PI / 2); g.translate(0.5, 0, 0); return shade(new THREE.Mesh(g, m)); }
+function setLink(o, x1, z1, x2, z2, y) { o.position.set(x1, y, z1); o.rotation.set(0, -Math.atan2(z2 - z1, x2 - x1), 0); o.scale.x = Math.max(1, Math.hypot(x2 - x1, z2 - z1)); }
+function label(text, cls, x, y, z, parent = world) { const el = document.createElement('div'); el.className = cls; el.textContent = text; const o = new CSS2DObject(el); o.position.set(x, y, z); parent.add(o); return o; }
+function disposeGroup(g) { g.traverse((o) => { if (o.geometry && !o.userData.sharedGeo) o.geometry.dispose(); }); g.parent && g.parent.remove(g); }
+
+// Boden
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(16000, 16000), floorMat);
+floor.receiveShadow = true;
+floor.position.set(1500, 0, 0);
+world.add(floor);
+const grid = new THREE.GridHelper(16000, 32, 0x9aa5b0, 0x9aa5b0);
+grid.rotation.x = Math.PI / 2;
+grid.position.set(1500, 0, 1);
+grid.material.transparent = true; grid.material.opacity = 0.35;
+world.add(grid);
+
+/* ---------- Roboter ---------- */
+const RB = {};
+(function buildRobot() {
+  const R = new THREE.Group(); world.add(R);
+  R.add(box(1000, 1000, 60, mat.dark, 0, 0, 30));
+  R.add(cylZ(390, 260, mat.dark, 0, 0, 190));
+  const T = RB.turret = new THREE.Group(); R.add(T);
+  T.add(cylZ(440, 110, mat.orange, 0, 0, 375));
+  T.add(box(860, 600, 360, mat.orange, 40, 0, 610));
+  T.add(box(430, 90, 600, mat.orange, 330, 250, 1000));
+  T.add(box(430, 90, 600, mat.orange, 330, -250, 1000));
+  T.add(cylY(150, 590, mat.orange, 330, 0, 1045));
+  T.add(cylY(118, 150, mat.dark, 330, 370, 1045));
+  T.add(cylY(108, 150, mat.dark, 330, -370, 1045));
+  T.add(cylZ(105, 280, mat.dark, -280, 170, 930));
+  T.add(box(260, 300, 160, mat.dark, -300, -120, 870));
+  // Oberarm
+  const U = RB.upper = new THREE.Group(); U.position.set(ROB.A1OFF, 0, ROB.H1); T.add(U);
+  U.add(box(1350, 200, 250, mat.orange, 675, 0, 0));
+  U.add(cylY(180, 300, mat.orange, ROB.L2, 0, 0));
+  // Unterarm
+  const Fa = RB.fore = new THREE.Group(); Fa.position.set(ROB.L2, 0, 0); U.add(Fa);
+  Fa.add(box(ROB.L3 - 150 + 300, 210, 230, mat.orange, (ROB.L3 - 150 - 300) / 2, 0, 0));
+  Fa.add(box(280, 280, 290, mat.dark, -430, 0, 0));
+  Fa.add(box(180, 170, 180, mat.orange, ROB.L3 - 90, 0, 0));
+  Fa.add(cylY(110, 230, mat.orange, ROB.L3, 0, 0));
+  Fa.add(box(320, 34, 70, mat.steel, -160, -150, 0));
+  // Handgelenk (bleibt waagerecht)
+  const W = RB.wrist = new THREE.Group(); W.position.set(ROB.L3, 0, 0); Fa.add(W);
+  W.add(box(200, 190, ROB.D6 - 40, mat.orange, 0, 0, -(ROB.D6 - 40) / 2));
+  W.add(cylZ(118, 40, mat.dark, 0, 0, -ROB.D6 + 20));
+  const FL = RB.flange = new THREE.Group(); FL.position.set(0, 0, -ROB.D6); W.add(FL);
+  const G = RB.tcp = new THREE.Group(); G.position.set(0, 0, -ROB.TOOLZ); FL.add(G);
+  // Parallelogramm und Gewichtsausgleich
+  RB.crank = linkBox(50, 70, mat.steel); T.add(RB.crank);
+  RB.rod = linkBox(40, 40, mat.steel); T.add(RB.rod);
+  RB.cbHouse = linkCyl(62, mat.dark); T.add(RB.cbHouse);
+  RB.cbRod = linkCyl(26, mat.steel); T.add(RB.cbRod);
+
+  // Sackgabelgreifer (Ursprung = TCP = Sackmitte, Z oben)
+  G.add(cylZ(120, 25, mat.dark, 0, 0, 337));
+  G.add(box(200, 200, 60, mat.grip, 0, 0, 295));
+  G.add(box(760, 150, 60, mat.grip, 0, 0, 235));
+  G.add(box(60, 500, 40, mat.grip, 290, 0, 185));
+  G.add(box(60, 500, 40, mat.grip, -290, 0, 185));
+  G.add(cylZ(34, 90, mat.steel, 200, 0, 310));
+  G.add(cylZ(34, 90, mat.steel, -200, 0, 310));
+  RB.tines = [];
+  const TX = [-270, -150, -30, 90, 210], TLEN = 90;
+  for (const s of [1, -1]) {
+    G.add(box(680, 40, 50, mat.grip, 0, s * 229, 140));
+    for (const x of TX) {
+      G.add(box(30, 14, 279, mat.steel, x, s * 229, 25.5));
+      const piv = new THREE.Group(); piv.position.set(x, s * 222, -107); G.add(piv);
+      const g = new THREE.BoxGeometry(40, TLEN, 14); g.translate(0, -s * TLEN / 2, 0);
+      piv.add(shade(new THREE.Mesh(g, mat.steel)));
+      piv.userData.side = s;
+      RB.tines.push(piv);
+    }
+  }
+  RB.nieder = box(520, 260, 16, mat.yellow, 0, 0, 178);
+  G.add(RB.nieder);
+  RB.nRods = [200, -200].map((x) => { const o = cylZ(11, 1, mat.steel, x, 0, 0); G.add(o); return o; });
+})();
+label('KR 3200 PA', 'tag', -200, -650, 1500);
+
+function setRobot(q) {
+  const yaw = -q[0] * D2R, thu = -q[1] * D2R, thf = thu - q[2] * D2R;
+  RB.turret.rotation.z = yaw;
+  RB.upper.rotation.y = -thu;
+  RB.fore.rotation.y = -(thf - thu);
+  RB.wrist.rotation.y = thf;
+  RB.flange.rotation.z = -q[3] * D2R;
+  const LEV = 320, Sx = ROB.A1OFF, Sz = ROB.H1;
+  const ux = Math.cos(thu), uz = Math.sin(thu), fx = Math.cos(thf), fz = Math.sin(thf);
+  const S2x = Sx - LEV * fx, S2z = Sz - LEV * fz;
+  const Ex = Sx + ROB.L2 * ux, Ez = Sz + ROB.L2 * uz;
+  setLink(RB.crank, Sx, Sz, S2x, S2z, -150);
+  setLink(RB.rod, S2x, S2z, Ex - LEV * fx, Ez - LEV * fz, -150);
+  const Ax = -120, Az = 1290, Px = Sx + 470 * ux, Pz = Sz + 470 * uz;
+  const L = Math.hypot(Px - Ax, Pz - Az);
+  setLink(RB.cbRod, Ax, Az, Px, Pz, 330);
+  setLink(RB.cbHouse, Ax, Az, Ax + (Px - Ax) * (430 / L), Az + (Pz - Az) * (430 / L), 330);
+}
+
+/* ---------- Saecke ---------- */
+let bagGeo = null, bagMats = [];
+function makeBag() {
+  const g = new THREE.Group();
+  const m = bagMats[Math.floor(Math.random() * bagMats.length)];
+  const body = shade(new THREE.Mesh(bagGeo, m)); body.userData.sharedGeo = true;
+  g.add(body);
+  const vg = new THREE.BoxGeometry(70, 130, 6);
+  g.add(shade(new THREE.Mesh(vg, mat.valve)).translateX(D.rSackL / 2 - 70).translateY(D.rSackB / 4).translateZ(D.rSackH / 2 - 1));
+  const pg = new THREE.BoxGeometry(D.rSackL * 0.3, D.rSackB * 0.5, 2);
+  g.add(shade(new THREE.Mesh(pg, mat.print)).translateX(-D.rSackL * 0.12).translateZ(D.rSackH / 2 - 0.5));
+  return g;
+}
+function initBagAssets() {
+  if (bagGeo) bagGeo.dispose();
+  const r = Math.min(30, D.rSackH / 4);
+  bagGeo = new RoundedBoxGeometry(D.rSackL, D.rSackB, D.rSackH, 3, r);
+  bagMats = [0xd9c8a4, 0xd4c19b, 0xdecfae, 0xd1bd95].map((c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.92 }));
+}
+
+/* ---------- Zelle: Palette, Rollenbahn ---------- */
+const CELL = {
+  finger: 0, nieder: 0, held: null, heldOff: 0, heldOff0: 0, heldZ0: 0, feedOn: true,
+  conv: null, pal: null, falling: [], loose: [], prevPalVoll: false, statics: [],
+};
+const CONV_V = 800;
+
+function makePalletMesh() {
+  const g = new THREE.Group();
+  [[0, 145], [186.25, 286.25], [327.5, 472.5], [513.75, 613.75], [655, 800]].forEach(([a, b]) => g.add(box(1200, b - a, 22, mat.wood, 600, (a + b) / 2, -11)));
+  [72.5, 600, 1127.5].forEach((x) => g.add(box(145, 800, 22, mat.woodDark, x, 400, -33)));
+  [72.5, 600, 1127.5].forEach((x) => [[50, 100], [400, 145], [750, 100]].forEach(([y, w]) => g.add(box(145, w, 78, mat.woodDark, x, y, -83))));
+  [[50, 100], [400, 145], [750, 100]].forEach(([y, w]) => g.add(box(1200, w, 22, mat.wood, 600, y, -133)));
+  return g;
+}
+function palletPose(off) {
+  const B = D.fBasisPal, a = B.A * D2R;
+  return { x: B.X + Math.sin(a) * off, y: B.Y - Math.cos(a) * off, z: B.Z, a };
+}
+function newPallet(off = 0) {
+  const g = new THREE.Group();
+  g.add(makePalletMesh());
+  const p = palletPose(off);
+  g.position.set(p.x, p.y, p.z); g.rotation.z = p.a;
+  world.add(g);
+  return { group: g, bags: [], state: off > 0 ? 'arriving' : 'present', off, t: 0, req: false };
+}
+function buildStatics() {
+  CELL.statics.forEach(disposeGroup); CELL.statics = [];
+  // Bodenmarkierung Palettenplatz
+  const Bp = D.fBasisPal, gm = new THREE.Group();
+  gm.position.set(Bp.X, Bp.Y, 1); gm.rotation.z = Bp.A * D2R;
+  [[600, -60, 1320, 24], [600, 860, 1320, 24], [-60, 400, 24, 944], [1260, 400, 24, 944]].forEach(([x, y, w, d]) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), mat.marking); m.position.set(x, y, 0); gm.add(m); });
+  world.add(gm); CELL.statics.push(gm);
+  label('Europalette', 'tag', 600, -140, 40, gm);
+  // Rollenbahn (Aufnahmebasis: X = Saecklaenge entgegen Foerderrichtung)
+  const Bk = D.fBasisPick, gc = new THREE.Group();
+  gc.position.set(Bk.X, Bk.Y, Bk.Z); gc.rotation.z = Bk.A * D2R;
+  const yc = D.rPickY, uEnd = D.rPickX + 2900, top = 0;
+  for (let u = 50; u < uEnd; u += 105) gc.add(shade(new THREE.Mesh(new THREE.CylinderGeometry(28, 28, 230, 18), mat.roller)).translateX(u).translateY(yc).translateZ(top - 30));
+  for (const s of [1, -1]) {
+    gc.add(box(uEnd + 20, 30, 50, mat.frame, (uEnd - 20) / 2, yc + s * 100, top - 85));
+    for (let u = 150; u < uEnd; u += 950) gc.add(box(50, 50, Bk.Z - 110, mat.frame, u, yc + s * 100, -(Bk.Z - 110) / 2 - 110));
+  }
+  gc.add(box(24, 300, 140, mat.yellow, -14, yc, top + 50));
+  gc.add(box(40, 40, 60, mat.dark, -14, yc + 190, top + 40));
+  world.add(gc); CELL.statics.push(gc);
+  label('Aufnahme · Rollenbahn', 'tag', D.rPickX + 1500, yc, 260, gc);
+  CELL.convGroup = gc;
+}
+function newConveyor() {
+  return { bags: [], uStop: D.rPickX, uBuf: D.rPickX + D.rSackL + 160, uSpawn: D.rPickX + 2500 };
+}
+function convSpawn(u, target, role) {
+  const m = makeBag();
+  m.position.set(u, D.rPickY, D.rPickZ);
+  CELL.convGroup.add(m);
+  const b = { mesh: m, u, target, role, arrived: u === target };
+  CELL.conv.bags.push(b);
+  return b;
+}
+function convBagWorld(b) {
+  const p = baseToWorld(D.fBasisPick, b.u, D.rPickY, D.rPickZ);
+  return { ...p, a: D.fBasisPick.A };
+}
+function palToLocal(x, y) {
+  const P = CELL.pal.group.position, a = CELL.pal.group.rotation.z;
+  const dx = x - P.x, dy = y - P.y;
+  return { x: Math.cos(a) * dx + Math.sin(a) * dy, y: -Math.sin(a) * dx + Math.cos(a) * dy };
+}
+function addPlacedBag(lx, ly, lz, ayaw) {
+  const m = makeBag();
+  m.position.set(lx, ly, lz); m.rotation.z = ayaw * D2R;
+  CELL.pal.group.add(m);
+  CELL.pal.bags.push({ mesh: m, x: lx, y: ly, z: lz, a: ayaw });
+}
+function prefillPallet() {
+  for (let l = 1; l <= D.nLagen; l++) for (let s = 1; s <= D.nSackProLage; s++) {
+    if (l > V.nLage || (l === V.nLage && s >= V.nSack)) continue;
+    const M = D.Muster[l % 2 === 1 ? 1 : 2][s];
+    addPlacedBag(M.X, M.Y, D.rPalZ0 + (l - 1) * D.rLagenH + D.rLagenH / 2, M.A);
+  }
+}
+
+function tryAttach() {
+  const st = CELL.conv.bags.find((b) => b.role === 'station' && b.arrived);
+  if (!st) return;
+  const w = convBagWorld(st);
+  const dz = w.z - TCP.z;
+  if (Math.hypot(w.x - TCP.x, w.y - TCP.y) > 45 || dz < -5 || dz > 45) return;
+  CELL.conv.bags.splice(CELL.conv.bags.indexOf(st), 1);
+  CELL.convGroup.remove(st.mesh);
+  RB.tcp.add(st.mesh);
+  st.mesh.position.set(0, 0, dz);
+  st.mesh.rotation.z = wrap180(w.a - TCP.a) * D2R;
+  CELL.held = st.mesh; CELL.heldOff0 = dz; CELL.heldOff = dz; CELL.heldZ0 = TCP.z;
+}
+function footprint(a) {
+  const c = Math.abs(Math.cos(a * D2R)), s = Math.abs(Math.sin(a * D2R));
+  return { hx: c * D.rSackL / 2 + s * D.rSackB / 2, hy: s * D.rSackL / 2 + c * D.rSackB / 2 };
+}
+function releaseBag() {
+  const m = CELL.held; CELL.held = null;
+  const yaw = TCP.a + m.rotation.z * R2D;
+  RB.tcp.remove(m);
+  world.add(m);
+  const c = { x: TCP.x, y: TCP.y, z: TCP.z + CELL.heldOff };
+  m.position.set(c.x, c.y, c.z); m.rotation.set(0, 0, yaw * D2R);
+  // Auflage ermitteln: Boden, Palette, darunterliegende Saecke
+  let top = 0, onPal = false;
+  if (CELL.pal && CELL.pal.state === 'present') {
+    const lp = palToLocal(c.x, c.y);
+    const ly = wrap180(yaw - CELL.pal.group.rotation.z * R2D);
+    if (lp.x > -150 && lp.x < 1350 && lp.y > -150 && lp.y < 950) { top = CELL.pal.group.position.z; onPal = true; }
+    const f1 = footprint(ly), area = 4 * f1.hx * f1.hy;
+    for (const b of CELL.pal.bags) {
+      const f2 = footprint(b.a);
+      const ox = Math.min(lp.x + f1.hx, b.x + f2.hx) - Math.max(lp.x - f1.hx, b.x - f2.hx);
+      const oy = Math.min(lp.y + f1.hy, b.y + f2.hy) - Math.max(lp.y - f1.hy, b.y - f2.hy);
+      if (ox > 0 && oy > 0 && ox * oy > 0.2 * area) top = Math.max(top, CELL.pal.group.position.z + b.z + D.rSackH / 2);
+    }
+  }
+  const bottom = c.z - D.rSackH / 2;
+  top = Math.min(top, bottom);
+  CELL.falling.push({ m, x: c.x, y: c.y, z: c.z, yaw, vz: 0, zLand: top + D.rSackH / 2, onPal });
+}
+function fallingUpdate(h) {
+  for (let i = CELL.falling.length - 1; i >= 0; i--) {
+    const f = CELL.falling[i];
+    f.vz += 9810 * h; f.z -= f.vz * h;
+    if (f.z <= f.zLand) {
+      f.z = f.zLand;
+      CELL.falling.splice(i, 1);
+      if (f.onPal && CELL.pal && CELL.pal.state === 'present') {
+        world.remove(f.m);
+        const lp = palToLocal(f.x, f.y), a = wrap180(f.yaw - CELL.pal.group.rotation.z * R2D);
+        f.m.position.set(lp.x, lp.y, f.z - CELL.pal.group.position.z); f.m.rotation.set(0, 0, a * D2R);
+        CELL.pal.group.add(f.m);
+        CELL.pal.bags.push({ mesh: f.m, x: lp.x, y: lp.y, z: f.z - CELL.pal.group.position.z, a });
+        STATS.placed += 1;
+      } else { CELL.loose.push(f.m); }
+    }
+    f.m.position.z = f.z;
+  }
+}
+function convUpdate(h) {
+  const C = CELL.conv;
+  const station = C.bags.find((b) => b.role === 'station');
+  const buffer = C.bags.find((b) => b.role === 'buffer');
+  // SPS: Flanke "Sack entnommen" speichern, bis der naechste Sack eingefoerdert wird
+  if (IO.out.SackEntn && !CELL.prevSackEntn) CELL.convRelease = true;
+  CELL.prevSackEntn = IO.out.SackEntn;
+  if (!station && buffer && buffer.arrived && CELL.feedOn && CELL.convRelease) { buffer.role = 'station'; buffer.target = C.uStop; buffer.arrived = false; CELL.convRelease = false; }
+  if (!C.bags.some((b) => b.role === 'buffer') && CELL.feedOn) convSpawn(C.uSpawn, C.uBuf, 'buffer');
+  for (const b of C.bags) {
+    if (b.arrived) continue;
+    if (!CELL.feedOn && b.role === 'station') continue;
+    const d = b.target - b.u, st = CONV_V * h;
+    if (Math.abs(d) <= st) { b.u = b.target; b.arrived = true; } else b.u += Math.sign(d) * st;
+    b.mesh.position.x = b.u;
+  }
+  const s2 = C.bags.find((b) => b.role === 'station');
+  IO.inp.SackDa = !!s2 && s2.arrived;
+}
+function palletUpdate(h) {
+  const P = CELL.pal;
+  if (IO.out.PalVoll && !CELL.prevPalVoll && P && P.state === 'present') P.req = true;
+  CELL.prevPalVoll = IO.out.PalVoll;
+  if (!P) return;
+  if (P.state === 'present' && P.req) { P.t += h; if (P.t > 0.8) { P.state = 'leaving'; P.t = 0; P.req = false; } }
+  else if (P.state === 'leaving') { P.off += 650 * h; if (P.off >= 2600) { disposeGroup(P.group); P.state = 'away'; P.t = 0; P.bags = []; } }
+  else if (P.state === 'away') { P.t += h; if (P.t > 0.8) { const np = newPallet(2600); CELL.pal = np; return palletUpdate(0); } }
+  else if (P.state === 'arriving') { P.off = Math.max(0, P.off - 650 * h); if (P.off <= 0) P.state = 'present'; }
+  if (P.state !== 'away') { const p = palletPose(P.off); P.group.position.set(p.x, p.y, p.z); }
+  IO.inp.PalBereit = CELL.pal.state === 'present';
+}
+function cellUpdate(h) {
+  const tgt = IO.out.GabelAuf && !IO.out.GabelZu ? 1 : (IO.out.GabelZu && !IO.out.GabelAuf ? 0 : CELL.finger);
+  const prev = CELL.finger;
+  CELL.finger = approach(CELL.finger, tgt, h / 0.45);
+  IO.inp.GabelAuf = CELL.finger >= 0.999;
+  IO.inp.GabelZu = CELL.finger <= 0.001;
+  if (prev > 0.001 && CELL.finger <= 0.001 && !CELL.held) tryAttach();
+  if (CELL.held && CELL.finger > 0.3) releaseBag();
+  CELL.nieder = approach(CELL.nieder, IO.out.NiederAb ? 1 : 0, h / 0.22);
+  IO.inp.NiederOben = CELL.nieder <= 0.001;
+  if (CELL.held) CELL.heldOff = Math.max(0, CELL.heldOff0 - (TCP.z - CELL.heldZ0));
+  IO.inp.SackImGr = !!CELL.held;
+  convUpdate(h);
+  palletUpdate(h);
+  fallingUpdate(h);
+}
+function updateGripperVis() {
+  for (const p of RB.tines) p.rotation.z = p.userData.side * (Math.PI / 2) * CELL.finger;
+  if (CELL.held) CELL.held.position.z = CELL.heldOff;
+  const up = 178, down = CELL.held ? 100 + CELL.heldOff + 8 : 70;
+  const z = up + (down - up) * CELL.nieder;
+  RB.nieder.position.z = z;
+  for (const r of RB.nRods) { const z1 = z + 8, z2 = 265; r.scale.z = Math.max(1, z2 - z1); r.position.z = (z1 + z2) / 2; }
+}
+
+/* ---------- Bahn und Zielpunkte ---------- */
+const TRAIL_N = 1400;
+const trailGeo = new THREE.BufferGeometry();
+trailGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(TRAIL_N * 3), 3));
+trailGeo.setDrawRange(0, 0);
+const trail = new THREE.Line(trailGeo, new THREE.LineBasicMaterial({ color: 0x2c6a99, transparent: true, opacity: 0.75 }));
+world.add(trail);
+const trailPts = [];
+let trailAcc = 0;
+function trailPush(p) {
+  trailPts.push(p.x, p.y, p.z);
+  if (trailPts.length > TRAIL_N * 3) trailPts.splice(0, 3);
+  trailGeo.attributes.position.array.set(trailPts);
+  trailGeo.attributes.position.needsUpdate = true;
+  trailGeo.setDrawRange(0, trailPts.length / 3);
+}
+const markers = {};
+const MK = [['fPickUeber', 0], ['fPickVor', 0], ['fPick', 0], ['fUeber', 1], ['fVor', 1], ['fAblage', 1], ['fAbheben', 1]];
+const mkGeo = new THREE.SphereGeometry(22, 16, 12);
+const mkMat = [new THREE.MeshBasicMaterial({ color: 0x2c6a99 }), new THREE.MeshBasicMaterial({ color: 0xd9661a })];
+const mkGroup = new THREE.Group(); world.add(mkGroup);
+for (const [n, k] of MK) {
+  const m = new THREE.Mesh(mkGeo, mkMat[k]); m.userData.sharedGeo = true; m.visible = false; mkGroup.add(m);
+  const el = document.createElement('div'); el.className = 'pt' + (k ? ' place' : ''); el.textContent = n;
+  const lab = new CSS2DObject(el); lab.position.set(0, 0, 70); m.add(lab);
+  markers[n] = m;
+}
+function updateMarkers() {
+  if (!markersDirty) return;
+  markersDirty = false;
+  const offs = { fPickUeber: [0, 0], fPickVor: [0, 0], fPick: [0, 0], fUeber: [0, 0], fVor: [0, 0], fAblage: [0, 0], fAbheben: [0, 0] };
+  for (const [n] of MK) {
+    const p = F[n], m = markers[n];
+    if (!p) { m.visible = false; continue; }
+    m.visible = true;
+    m.position.set(p.x + offs[n][0], p.y + offs[n][1], p.z);
+  }
+  // Beschriftungen nebeneinanderliegender Punkte entzerren
+  const pairs = [['fUeber', 'fAbheben', 'fVor', 'fAblage'], ['fPickUeber', 'fPickVor', 'fPick']];
+  for (const grp of pairs) grp.forEach((n, i) => { markers[n].children[0].center.set(i % 2 ? -0.05 : 1.05, 0.5); });
+}
+
+/* ---------- Kamera ---------- */
+const CAMS = {
+  iso: { p: [1.2, 3.4, 6.4], t: [1.75, 0.6, 0.0] },
+  top: { p: [1.8, 8.8, 0.02], t: [1.8, 0, 0] },
+  side: { p: [-2.4, 3.3, 4.4], t: [1.9, 0.6, 0.15] },
+  near: { p: [3.6, 2.0, 3.1], t: [2.25, 0.85, 0.55] },
+};
+let camTween = null;
+function setCam(name, instant = false) {
+  const c = CAMS[name];
+  if (instant || reduceMotion) { camera.position.set(...c.p); controls.target.set(...c.t); controls.update(); return; }
+  camTween = { t: 0, p0: camera.position.clone(), t0: controls.target.clone(), p1: new THREE.Vector3(...c.p), t1: new THREE.Vector3(...c.t) };
+}
+function tickCam(dt) {
+  if (!camTween) return;
+  camTween.t = Math.min(1, camTween.t + dt / 0.7);
+  const s = camTween.t * camTween.t * (3 - 2 * camTween.t);
+  camera.position.lerpVectors(camTween.p0, camTween.p1, s);
+  controls.target.lerpVectors(camTween.t0, camTween.t1, s);
+  if (camTween.t >= 1) camTween = null;
+}
+
+function themeScene() {
+  const cs = getComputedStyle(document.documentElement);
+  const col = (n) => new THREE.Color(cs.getPropertyValue(n).trim() || '#dde3e8');
+  scene.background = col('--scene');
+  floorMat.color = col('--floor');
+  grid.material.color = col('--grid');
+  scene.fog = new THREE.Fog(scene.background, 14, 34);
+}
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', themeScene);
+new MutationObserver(themeScene).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+function resize() {
+  const w = viewport.clientWidth, h = viewport.clientHeight;
+  renderer.setSize(w, h, false);
+  renderer.domElement.style.width = w + 'px'; renderer.domElement.style.height = h + 'px';
+  labelRenderer.setSize(w, h);
+  camera.aspect = w / Math.max(1, h);
+  camera.fov = camera.aspect < 0.9 ? 62 : camera.aspect < 1.3 ? 50 : 40;
+  camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(viewport);
+
+/* =====================================================================
+   Bedienoberflaeche
+   ===================================================================== */
+const codeEl = $('#code');
+function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+const KW = /("[^"]*")|(\$\w+)|\b(DEF|DEFFCT|ENDFCT|END|IF|THEN|ELSE|ENDIF|WHILE|ENDWHILE|SWITCH|CASE|DEFAULT|ENDSWITCH|RETURN|CONTINUE|WAIT|FOR|SEC|TRIGGER|WHEN|DISTANCE|DELAY|DO|DECL|GLOBAL|INTERRUPT|ON|NOT|AND|OR|MOD|TRUE|FALSE|HALT|PTP|LIN|C_PTP|C_DIS|INT|REAL|BOOL|FRAME|BAS)\b|(\b\d+(?:\.\d+)?\b)/g;
+function hl(line) {
+  const ci = line.indexOf(';');
+  const code = ci >= 0 ? line.slice(0, ci) : line, com = ci >= 0 ? line.slice(ci) : '';
+  const c = esc(code).replace(KW, (m, s, sv, kw, num) => s ? `<span class="t-str">${s}</span>` : sv ? `<span class="t-sys">${sv}</span>` : kw ? `<span class="t-kw">${kw}</span>` : `<span class="t-num">${num}</span>`);
+  return c + (com ? `<span class="t-com">${esc(com)}</span>` : '');
+}
+const lineEls = [];
+(function renderCode() {
+  const frag = document.createDocumentFragment();
+  SRC_LINES.forEach((l, i) => {
+    const d = document.createElement('div'); d.className = 'ln';
+    d.innerHTML = `<span class="no">${i + 1}</span><span class="tx">${hl(l) || ' '}</span>`;
+    frag.appendChild(d); lineEls.push(d);
+  });
+  codeEl.appendChild(frag);
+})();
+let shownMain = -1, shownAdv = -1;
+function showPointers() {
+  const m = EX.mainLine, a = EX.advLine;
+  if (a !== shownAdv) { lineEls[shownAdv]?.classList.remove('adv'); if (a !== m) lineEls[a]?.classList.add('adv'); shownAdv = a; }
+  if (m !== shownMain) {
+    lineEls[shownMain]?.classList.remove('run');
+    const el = lineEls[m];
+    if (el) {
+      el.classList.add('run'); el.classList.remove('adv');
+      if ($('#cbFollow').checked && !$('#pane-src').hidden) {
+        const top = el.offsetTop, h = codeEl.clientHeight;
+        if (top < codeEl.scrollTop + 30 || top > codeEl.scrollTop + h - 50) codeEl.scrollTop = top - h * 0.35;
+      }
+    }
+    shownMain = m;
+  }
+}
+
+// Tabs
+document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => {
+  document.querySelectorAll('.tab').forEach((x) => x.setAttribute('aria-selected', String(x === t)));
+  document.querySelectorAll('.pane').forEach((p) => { p.hidden = p.id !== t.getAttribute('aria-controls'); });
+  try { localStorage.setItem('pal-tab', t.id); } catch (e) {}
+  shownMain = -1;
+}));
+try { const tid = localStorage.getItem('pal-tab'); if (tid && document.getElementById(tid)) document.getElementById(tid).click(); } catch (e) {}
+
+// Meldungen
+const msgbar = $('#msgbar'), msgtxt = $('#msgtxt'), btnQuit = $('#btnQuit');
+let msgState = null;
+function showMsg(kind, text, sub, quit = false) {
+  msgState = { kind, text, sub };
+  msgbar.dataset.kind = kind;
+  msgtxt.innerHTML = `${esc(text)}${sub ? `<small>${esc(sub)}</small>` : ''}`;
+  btnQuit.hidden = !quit;
+}
+function clearMsg() { msgState = null; }
+function idleMsg() {
+  if (msgState) return;
+  if (EX.failed) return;
+  if (running) { msgbar.dataset.kind = 'run'; msgtxt.textContent = 'Programm läuft – Automatik'; }
+  else { msgbar.dataset.kind = 'notify'; msgtxt.textContent = programEnded ? 'Programm beendet' : 'Angehalten – Start drücken'; }
+  btnQuit.hidden = true;
+}
+btnQuit.addEventListener('click', () => { quitAcked = true; clearMsg(); });
+
+// E/A-Tabellen
+const IN_ROWS = [['SackDa', 'nInSackDa', 'Sack an Aufnahme bereit'], ['PalBereit', 'nInPalBereit', 'Leere Palette bereit'], ['GabelAuf', 'nInGabelAuf', 'Gabel offen'], ['GabelZu', 'nInGabelZu', 'Gabel geschlossen'], ['NiederOben', 'nInNiederOben', 'Niederhalter oben'], ['SackImGr', 'nInSackImGr', 'Sack im Greifer'], ['ZyklEnde', 'nInZyklEnde', 'Zyklusende angewählt']];
+const OUT_ROWS = [['GabelAuf', 'nOutGabelAuf', 'Gabel öffnen'], ['GabelZu', 'nOutGabelZu', 'Gabel schließen'], ['NiederAb', 'nOutNiederAb', 'Niederhalter ab'], ['SackEntn', 'nOutSackEntn', 'Sack entnommen'], ['PalVoll', 'nOutPalVoll', 'Palette voll']];
+const AX = ['A1', 'A2', 'A3', 'A6'];
+const ioEls = { in: {}, out: {}, ax: [], tcp: {}, vars: {} };
+function buildIoTables() {
+  const mk = (rows, kind, tab) => {
+    tab.innerHTML = '';
+    for (const [k, dn, txt] of rows) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td><span class="led ${kind === 'out' ? 'out' : ''}"></span></td><td class="adr">$${kind === 'out' ? 'OUT' : 'IN'}[${D[dn]}]</td><td>${txt}</td>`;
+      tab.appendChild(tr); ioEls[kind][k] = tr.querySelector('.led');
+    }
+  };
+  mk(IN_ROWS, 'in', $('#tabIn')); mk(OUT_ROWS, 'out', $('#tabOut'));
+  const ta = $('#tabAx'); ta.innerHTML = ''; ioEls.ax = [];
+  AX.forEach((n, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td></td><td class="adr">${n}</td><td><div class="axbar"><i></i></div></td><td class="val">0.0°</td>`;
+    ta.appendChild(tr); ioEls.ax.push({ bar: tr.querySelector('i'), val: tr.querySelector('.val') });
+  });
+  const tr45 = document.createElement('tr'); tr45.innerHTML = '<td></td><td class="adr">A4 / A5</td><td colspan="2">mechanisch gekoppelt, Flansch waagerecht</td>'; ta.appendChild(tr45);
+  const tt = $('#tabTcp'); tt.innerHTML = ''; ioEls.tcp = {};
+  ['X', 'Y', 'Z', 'A'].forEach((n) => { const tr = document.createElement('tr'); tr.innerHTML = `<td></td><td class="adr">${n}</td><td></td><td class="val">0</td>`; tt.appendChild(tr); ioEls.tcp[n] = tr.querySelector('.val'); });
+  const tv = $('#tabVar'); tv.innerHTML = ''; ioEls.vars = {};
+  ['nLage', 'nSack', 'nPalGesamt', 'bSackImGr', '$LOAD.M', '$VEL.CP'].forEach((n) => { const tr = document.createElement('tr'); tr.innerHTML = `<td></td><td class="adr" colspan="2">${n}</td><td class="val"></td>`; tv.appendChild(tr); ioEls.vars[n] = tr.querySelector('.val'); });
+}
+const LOADS = { leer: 0, voll: 0 };
+function fmtTime(t) { const m = Math.floor(t / 60), s = Math.floor(t % 60); return `${m}:${String(s).padStart(2, '0')}`; }
+function updateUi() {
+  $('#stLage').textContent = `${Math.min(V.nLage, D.nLagen)} / ${D.nLagen}`;
+  $('#stSack').textContent = V.nLage > D.nLagen ? 'voll' : `${V.nSack} / ${D.nSackProLage}`;
+  $('#stPal').textContent = String(V.nPalGesamt);
+  const pt = STATS.pickTimes;
+  if (pt.length >= 2) {
+    const diffs = []; for (let i = 1; i < pt.length; i++) diffs.push(pt[i] - pt[i - 1]);
+    diffs.sort((a, b) => a - b);
+    const med = diffs[Math.floor(diffs.length / 2)];
+    $('#stTakt').textContent = `${med.toFixed(1).replace('.', ',')} s`;
+    $('#stRate').textContent = String(Math.round(3600 / med));
+  } else { $('#stTakt').textContent = '–'; $('#stRate').textContent = '–'; }
+  $('#stTime').textContent = fmtTime(STATS.t);
+  if ($('#pane-io').hidden) return;
+  for (const [k] of IN_ROWS) ioEls.in[k].classList.toggle('on', !!IO.inp[k]);
+  for (const [k] of OUT_ROWS) ioEls.out[k].classList.toggle('on', !!IO.out[k]);
+  AX.forEach((n, i) => {
+    const [lo, hi] = ROB.lim[i], v = ROBQ[i];
+    ioEls.ax[i].bar.style.left = `calc(${((v - lo) / (hi - lo)) * 100}% - 1px)`;
+    ioEls.ax[i].val.textContent = `${v.toFixed(1)}°`;
+  });
+  ioEls.tcp.X.textContent = TCP.x.toFixed(1) + ' mm'; ioEls.tcp.Y.textContent = TCP.y.toFixed(1) + ' mm';
+  ioEls.tcp.Z.textContent = TCP.z.toFixed(1) + ' mm'; ioEls.tcp.A.textContent = wrap180(TCP.a).toFixed(1) + '°';
+  ioEls.vars.nLage.textContent = V.nLage; ioEls.vars.nSack.textContent = V.nSack; ioEls.vars.nPalGesamt.textContent = V.nPalGesamt;
+  ioEls.vars.bSackImGr.textContent = V.bSackImGr ? 'TRUE' : 'FALSE';
+  ioEls.vars['$LOAD.M'].textContent = `${(S.load === 'voll' ? LOADS.voll : LOADS.leer).toFixed(1)} kg`;
+  ioEls.vars['$VEL.CP'].textContent = `${S.velCP.toFixed(2)} m/s`;
+}
+
+// Bedienelemente
+const btnPlay = $('#btnPlay');
+function syncPlay() {
+  btnPlay.querySelector('span').textContent = running ? 'Pause' : (programEnded ? 'Neustart' : 'Start');
+  btnPlay.querySelector('svg').innerHTML = running ? '<path d="M3.5 2.5h3v11h-3zM9.5 2.5h3v11h-3z"/>' : '<path d="M4 2.5v11l9-5.5z"/>';
+}
+btnPlay.addEventListener('click', () => {
+  if (EX.failed) return;
+  if (!running && programEnded) { EX.start(P_main); clearMsg(); }
+  running = !running; stepMode = false; syncPlay();
+});
+$('#btnStep').addEventListener('click', () => {
+  if (EX.failed) return;
+  if (programEnded) { EX.start(P_main); clearMsg(); }
+  stepMode = true; stepLine = EX.mainLine; running = true; syncPlay();
+});
+$('#btnReset').addEventListener('click', () => { resetSim(); });
+$('#selSpeed').addEventListener('change', (e) => { speed = parseFloat(e.target.value); });
+document.querySelectorAll('[data-cam]').forEach((b) => b.addEventListener('click', () => setCam(b.dataset.cam)));
+function toggle(id, fn) { const b = $(id); b.addEventListener('click', () => { const on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', String(on)); fn(on); }); }
+toggle('#tgTrail', (on) => { trail.visible = on; });
+toggle('#tgPts', (on) => { mkGroup.visible = on; });
+toggle('#tgFeed', (on) => { CELL.feedOn = on; });
+toggle('#tgEnd', (on) => { IO.inp.ZyklEnde = on; });
+
+const datEdit = $('#datEdit'), datMsg = $('#datMsg');
+datEdit.value = DAT_ORIG;
+$('#btnApply').addEventListener('click', () => {
+  const { errs } = parseDat(datEdit.value);
+  if (errs.length) { datMsg.textContent = 'Nicht übernommen: ' + errs.slice(0, 3).join(' · '); datMsg.classList.add('err'); return; }
+  datText = datEdit.value; resetSim();
+  datMsg.classList.remove('err');
+  datMsg.textContent = `Übernommen: ${D.nLagen} Lagen × ${D.nSackProLage} Säcke. Simulation neu gestartet.`;
+});
+$('#btnOrig').addEventListener('click', () => { datEdit.value = DAT_ORIG; datMsg.classList.remove('err'); datMsg.textContent = 'Original geladen. Mit „Übernehmen“ aktivieren.'; });
+
+/* =====================================================================
+   Reset / Simulationsschritt / Renderloop
+   ===================================================================== */
+function resetSim() {
+  const res = parseDat(datText);
+  if (res.errs.length) { showMsg('error', 'DAT fehlerhaft: ' + res.errs[0]); return false; }
+  D = res.D;
+  LOADS.leer = (D.ldLeer && D.ldLeer.M) || 0; LOADS.voll = (D.ldVoll && D.ldVoll.M) || 0;
+  Object.assign(V, { nLage: D.nLage, nSack: D.nSack, nPalGesamt: D.nPalGesamt, bSackImGr: false, bEnde: false, nMus: 1 });
+  Object.assign(IO.inp, { SackDa: false, PalBereit: false, GabelAuf: false, GabelZu: true, NiederOben: true, SackImGr: false, ZyklEnde: $('#tgEnd').getAttribute('aria-pressed') === 'true' });
+  Object.assign(IO.out, { GabelAuf: false, GabelZu: false, NiederAb: false, SackEntn: false, PalVoll: false });
+  for (const k in F) delete F[k];
+  markersDirty = true;
+  // Zelle neu aufbauen
+  if (CELL.held) { RB.tcp.remove(CELL.held); CELL.held = null; }
+  CELL.falling.forEach((f) => world.remove(f.m)); CELL.falling = [];
+  CELL.loose.forEach((m) => world.remove(m)); CELL.loose = [];
+  if (CELL.pal && CELL.pal.state !== 'away') disposeGroup(CELL.pal.group);
+  initBagAssets();
+  buildStatics();
+  CELL.finger = 0; CELL.nieder = 0; CELL.prevPalVoll = false; CELL.prevSackEntn = false; CELL.convRelease = false;
+  CELL.conv = newConveyor();
+  convSpawn(CELL.conv.uStop, CELL.conv.uStop, 'station');
+  convSpawn(CELL.conv.uBuf, CELL.conv.uBuf, 'buffer');
+  CELL.pal = newPallet(0);
+  prefillPallet();
+  STATS.t = 0; STATS.pickTimes = []; STATS.placed = 0;
+  trailPts.length = 0; trailGeo.setDrawRange(0, 0);
+  ROBQ = PARK_Q.slice(); TCP = fk(ROBQ);
+  EX = new Executor(PARK_Q); EX.start(P_main);
+  quitAcked = false; clearMsg();
+  buildIoTables();
+  shownMain = -1; shownAdv = -1; lineEls.forEach((e) => e.classList.remove('run', 'adv'));
+  cellUpdate(0);
+  setRobot(ROBQ); updateGripperVis();
+  return true;
+}
+function simStep(h) {
+  STATS.t += h;
+  EX.step(h);
+  ROBQ = EX.q(); TCP = fk(ROBQ);
+  cellUpdate(h);
+  trailAcc += h;
+  if (trailAcc > 0.04) { trailAcc = 0; trailPush(TCP); }
+  if (stepMode && EX.mainLine !== stepLine) { running = false; stepMode = false; syncPlay(); }
+}
+function simAdvance(dt) {
+  let rem = dt;
+  while (rem > 1e-9 && running && !EX.failed) { const h = Math.min(rem, 1 / 120); simStep(h); rem -= h; }
+}
+
+let lastT = performance.now(), uiAcc = 0;
+function frame(now) {
+  const dt = Math.min(0.1, (now - lastT) / 1000); lastT = now;
+  if (running) simAdvance(dt * speed);
+  setRobot(ROBQ); updateGripperVis(); updateMarkers();
+  tickCam(dt); controls.update();
+  renderer.render(scene, camera); labelRenderer.render(scene, camera);
+  showPointers();
+  uiAcc += dt; if (uiAcc > 0.1) { uiAcc = 0; updateUi(); idleMsg(); }
+  requestAnimationFrame(frame);
+}
+
+// Start: Zelle aufbauen, kurz vorlaufen lassen, dann live weiter
+themeScene();
+resize();
+setCam('iso', true);
+resetSim();
+running = true;
+simAdvance(21);
+running = !reduceMotion;
+syncPlay(); updateUi(); idleMsg();
+requestAnimationFrame(frame);
+
+window.__sim = {
+  ff(sec) { const r = running; running = true; simAdvance(sec); running = r; return this.state(); },
+  state() { return { t: STATS.t, nLage: V.nLage, nSack: V.nSack, pal: V.nPalGesamt, placed: STATS.placed, onPallet: CELL.pal ? CELL.pal.bags.length : 0, failed: EX.failed, msg: msgState, takt: $('#stTakt').textContent, rate: $('#stRate').textContent, line: EX.mainLine, palState: CELL.pal && CELL.pal.state, ended: programEnded, finger: CELL.finger, tcp: { ...TCP } }; },
+  setEnd(on) { IO.inp.ZyklEnde = on; },
+  setFeed(on) { CELL.feedOn = on; },
+  cam(p, t) { camTween = null; camera.position.set(...p); controls.target.set(...t); controls.update(); },
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,3 @@
+# KRL-Dateien mit Windows-Zeilenenden auschecken (wie auf der Robotersteuerung)
+*.src text eol=crlf
+*.dat text eol=crlf

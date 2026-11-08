@@ -1,0 +1,122 @@
+&ACCESS RVP
+&REL 1
+&PARAM TEMPLATE = C:\KRC\Roboter\Template\vorgabe
+&PARAM EDITMASK = *
+DEFDAT  Palettierung
+;=====================================================================
+; Datenliste zu Palettierung.src
+; Saecke 600 x 400 x 200 mm  ->  Europalette 1200 x 800 x 144 mm
+; 4 Lagen x 4 Saecke = 16 Saecke je Palette
+;---------------------------------------------------------------------
+; Masse in mm, Winkel in Grad, CP-Geschwindigkeiten in m/s
+;
+; Palettenbasis (BASE_DATA[nBasePal], 3-Punkt-Methode):
+;   Ursprung = Ecke Palettenoberkante, X entlang 1200-Kante,
+;   Y entlang 800-Kante, Z nach oben
+; Aufnahmebasis (BASE_DATA[nBasePick]):
+;   Ursprung = Ecke Sack am Anschlag auf Rollenoberkante,
+;   X in Foerderrichtung entgegen (Sacklaenge), Y = Sackbreite, Z oben
+;
+; Die Layout-Frames fBasisPal / fBasisPick entsprechen dem Zellenlayout
+; der Web-Simulation. Sie werden nur verwendet, wenn nBasePal = 0 bzw.
+; nBasePick = 0 ist (z.B. Offline-Test in OfficeLite / KUKA.Sim).
+;=====================================================================
+
+;--- Werkzeug / Basen -------------------------------------------------
+DECL INT nTool=1               ; TOOL_DATA[1] = Sackgabelgreifer, TCP = Sackmitte
+DECL INT nBasePal=1            ; BASE_DATA[1] = Palette  (0 = fBasisPal)
+DECL INT nBasePick=2           ; BASE_DATA[2] = Aufnahme (0 = fBasisPick)
+DECL FRAME fBasisPal={X 1600.0,Y -1300.0,Z 144.0,A 0.0,B 0.0,C 0.0}
+DECL FRAME fBasisPick={X 1950.0,Y 450.0,Z 700.0,A 0.0,B 0.0,C 0.0}
+DECL REAL rOriB=0.0            ; Werkzeugorientierung B (Flansch nach unten)
+DECL REAL rOriC=180.0          ; Werkzeugorientierung C
+
+;--- Lastdaten (Platzhalter! mit KUKA.LoadDataDetermination pruefen) --
+DECL LOAD ldLeer={M 95.0,CM {X 0.0,Y 0.0,Z 230.0,A 0.0,B 0.0,C 0.0},J {X 9.0,Y 6.0,Z 12.0}}
+DECL LOAD ldVoll={M 115.0,CM {X 0.0,Y 0.0,Z 270.0,A 0.0,B 0.0,C 0.0},J {X 11.0,Y 8.0,Z 14.0}}
+
+;--- Sack / Palette ---------------------------------------------------
+DECL REAL rSackL=600.0         ; Sacklaenge
+DECL REAL rSackB=400.0         ; Sackbreite
+DECL REAL rSackH=200.0         ; Sackhoehe (Nennmass)
+DECL REAL rLagenH=200.0        ; effektive Lagenhoehe (Sack setzt sich -> ggf. kleiner)
+DECL REAL rPalZ0=0.0           ; Z der Palettenoberkante in der Palettenbasis
+DECL INT nLagen=4              ; Anzahl Lagen
+DECL INT nSackProLage=4        ; Saecke je Lage (max. 8)
+
+;--- Lagenmuster ------------------------------------------------------
+; Muster 1 = ungerade Lagen (1,3), Muster 2 = gerade Lagen (2,4)
+; X,Y = Sackmitte in der Palettenbasis, A = Drehung um Z
+; VX,VY = Richtung Anfahrversatz (-1/0/+1): der Sack kommt schraeg von
+;         aussen und wird an die bereits liegenden Saecke angelegt
+; Reihenfolge: zuerst die Saecke auf der von der Aufnahme abgewandten
+; Seite, damit nie ueber bereits liegende Saecke der Lage gefahren wird
+STRUC SackPos_T REAL X,Y,A,VX,VY
+DECL SackPos_T Muster[2,8]
+Muster[1,1]={X 300.0,Y 200.0,A 0.0,VX -1.0,VY -1.0}
+Muster[1,2]={X 900.0,Y 200.0,A 0.0,VX 1.0,VY -1.0}
+Muster[1,3]={X 300.0,Y 600.0,A 0.0,VX -1.0,VY 1.0}
+Muster[1,4]={X 900.0,Y 600.0,A 0.0,VX 1.0,VY 1.0}
+Muster[2,1]={X 900.0,Y 200.0,A 180.0,VX 1.0,VY -1.0}
+Muster[2,2]={X 300.0,Y 200.0,A 180.0,VX -1.0,VY -1.0}
+Muster[2,3]={X 900.0,Y 600.0,A 180.0,VX 1.0,VY 1.0}
+Muster[2,4]={X 300.0,Y 600.0,A 180.0,VX -1.0,VY 1.0}
+
+;--- Aufnahme (Koordinaten in der Aufnahmebasis) -----------------------
+DECL REAL rPickX=300.0         ; Sackmitte X
+DECL REAL rPickY=200.0         ; Sackmitte Y
+DECL REAL rPickZ=100.0         ; Sackmitte Z (Rollenoberkante + rSackH/2)
+DECL REAL rPickA=0.0           ; Drehung um Z
+DECL REAL rPickTief=-15.0      ; Gabel faehrt so weit unter den Sack (zwischen die Rollen)
+DECL REAL rPickVorZ=60.0       ; Vorposition ueber Aufnahme (ab hier langsam)
+DECL REAL rPickUeberZ=450.0    ; Ueberfahrhoehe ueber Aufnahme
+
+;--- Ablage -----------------------------------------------------------
+DECL REAL rAblageZ=15.0        ; Gabel oeffnet so hoch ueber der Endlage
+DECL REAL rVorXY=40.0          ; Anfahrversatz seitlich
+DECL REAL rVorZ=60.0           ; Anfahrversatz oben (ab hier langsam)
+DECL REAL rUeberZ=350.0        ; Ueberfahrhoehe ueber der Ablage
+
+;--- Geschwindigkeit / Beschleunigung / Ueberschleifen ----------------
+DECL REAL rVelPTP=100.0        ; PTP-Geschwindigkeit [%]
+DECL REAL rAccPTP=100.0        ; PTP-Beschleunigung [%]
+DECL REAL rVelCP=2.0           ; LIN Freifahrt [m/s]
+DECL REAL rVelCPLangsam=0.4    ; LIN Anfahrt Aufnahme / Ablage [m/s]
+DECL REAL rAccCP=100.0         ; CP-Beschleunigung [%]
+DECL INT nApoPTP=50            ; Ueberschleifen PTP [%]
+DECL REAL rApoDis=80.0         ; Ueberschleifen LIN [mm]
+
+;--- Ein-/Ausgaenge (an E/A-Konfiguration in WorkVisual anpassen) -----
+DECL INT nInSackDa=17          ; E: Sack an Aufnahme bereit (Lichtschranke Anschlag)
+DECL INT nInPalBereit=18       ; E: leere Palette in Position, Palettierung freigegeben
+DECL INT nInGabelAuf=19        ; E: Gabel offen (Endlage)
+DECL INT nInGabelZu=20         ; E: Gabel geschlossen (Endlage)
+DECL INT nInNiederOben=21      ; E: Niederhalter oben (Endlage)
+DECL INT nInSackImGr=22        ; E: Sack im Greifer (Sensor)
+DECL INT nInZyklEnde=23        ; E: Zyklusende angewaehlt
+DECL INT nOutGabelAuf=17       ; A: Gabel oeffnen
+DECL INT nOutGabelZu=18        ; A: Gabel schliessen
+DECL INT nOutNiederAb=19       ; A: Niederhalter ab
+DECL INT nOutSackEntn=20       ; A: Sack entnommen -> Foerderer gibt naechsten Sack frei
+DECL INT nOutPalVoll=21        ; A: Palette voll -> Palettenwechsel
+DECL INT nTimeoutMs=3000       ; Ueberwachungszeit Greifer-Endlagen [ms]
+DECL INT nTimer=10             ; verwendeter $TIMER
+DECL REAL rNiederZeit=0.3      ; Zeit Niederhalter ab [s]
+
+;--- Zaehler / Status (remanent, bleiben bei Programmabbruch erhalten) -
+DECL INT nLage=1               ; als naechstes zu belegende Lage
+DECL INT nSack=1               ; als naechstes abzulegender Sack in der Lage
+DECL INT nPalGesamt=0          ; Anzahl fertiger Paletten (Statistik)
+DECL BOOL bSackImGr=FALSE      ; Sack im Greifer (Programmzustand)
+DECL BOOL bEnde=FALSE          ; Zyklusende erkannt
+DECL INT nMeldHandle=0         ; Handle der aktuellen Zustandsmeldung
+
+;--- berechnete Zielpunkte (Weltkoordinaten, TCP = Sackmitte) ----------
+DECL FRAME fPickUeber={X 0.0,Y 0.0,Z 0.0,A 0.0,B 0.0,C 0.0}
+DECL FRAME fPickVor={X 0.0,Y 0.0,Z 0.0,A 0.0,B 0.0,C 0.0}
+DECL FRAME fPick={X 0.0,Y 0.0,Z 0.0,A 0.0,B 0.0,C 0.0}
+DECL FRAME fUeber={X 0.0,Y 0.0,Z 0.0,A 0.0,B 0.0,C 0.0}
+DECL FRAME fVor={X 0.0,Y 0.0,Z 0.0,A 0.0,B 0.0,C 0.0}
+DECL FRAME fAblage={X 0.0,Y 0.0,Z 0.0,A 0.0,B 0.0,C 0.0}
+DECL FRAME fAbheben={X 0.0,Y 0.0,Z 0.0,A 0.0,B 0.0,C 0.0}
+ENDDAT
