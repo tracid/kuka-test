@@ -1461,7 +1461,14 @@ function linkBox(w, h, m) { const g = new THREE.BoxGeometry(1, w, h); g.translat
 function linkCyl(r, m) { const g = new THREE.CylinderGeometry(r, r, 1, 20); g.rotateZ(-Math.PI / 2); g.translate(0.5, 0, 0); return shade(new THREE.Mesh(g, m)); }
 function setLink(o, x1, z1, x2, z2, y) { o.position.set(x1, y, z1); o.rotation.set(0, -Math.atan2(z2 - z1, x2 - x1), 0); o.scale.x = Math.max(1, Math.hypot(x2 - x1, z2 - z1)); }
 function label(text, cls, x, y, z, parent = world) { const el = document.createElement('div'); el.className = cls; el.textContent = text; const o = new CSS2DObject(el); o.position.set(x, y, z); parent.add(o); return o; }
-function disposeGroup(g) { g.traverse((o) => { if (o.geometry && !o.userData.sharedGeo) o.geometry.dispose(); }); g.parent && g.parent.remove(g); }
+function disposeGroup(g) {
+  g.traverse((o) => {
+    if (o.geometry && !o.userData.sharedGeo) o.geometry.dispose();
+    // Beschriftungen haengen als DOM-Element im Label-Layer und muessen dort mit entfernt werden
+    if (o.isCSS2DObject && o.element.parentNode) o.element.parentNode.removeChild(o.element);
+  });
+  g.parent && g.parent.remove(g);
+}
 
 // Boden
 const floor = new THREE.Mesh(new THREE.PlaneGeometry(16000, 16000), floorMat);
@@ -1709,19 +1716,23 @@ function fallingUpdate(h) {
   for (let i = CELL.falling.length - 1; i >= 0; i--) {
     const f = CELL.falling[i];
     f.vz += 9810 * h; f.z -= f.vz * h;
-    if (f.z <= f.zLand) {
-      f.z = f.zLand;
-      CELL.falling.splice(i, 1);
-      if (f.onPal && CELL.pal && CELL.pal.state === 'present') {
-        world.remove(f.m);
-        const lp = palToLocal(f.x, f.y), a = wrap180(f.yaw - CELL.pal.group.rotation.z * R2D);
-        f.m.position.set(lp.x, lp.y, f.z - CELL.pal.group.position.z); f.m.rotation.set(0, 0, a * D2R);
-        CELL.pal.group.add(f.m);
-        CELL.pal.bags.push({ mesh: f.m, x: lp.x, y: lp.y, z: f.z - CELL.pal.group.position.z, a });
-        STATS.placed += 1;
-      } else { CELL.loose.push(f.m); }
+    if (f.z > f.zLand) { f.m.position.z = f.z; continue; }   // faellt noch (Weltkoordinaten)
+    // gelandet
+    f.z = f.zLand;
+    CELL.falling.splice(i, 1);
+    if (f.onPal && CELL.pal && CELL.pal.state === 'present') {
+      // an die Palette haengen: ab hier Koordinaten relativ zur Palettenoberkante
+      world.remove(f.m);
+      const lp = palToLocal(f.x, f.y), a = wrap180(f.yaw - CELL.pal.group.rotation.z * R2D);
+      const lz = f.z - CELL.pal.group.position.z;
+      f.m.position.set(lp.x, lp.y, lz); f.m.rotation.set(0, 0, a * D2R);
+      CELL.pal.group.add(f.m);
+      CELL.pal.bags.push({ mesh: f.m, x: lp.x, y: lp.y, z: lz, a });
+      STATS.placed += 1;
+    } else {
+      f.m.position.z = f.z;
+      CELL.loose.push(f.m);
     }
-    f.m.position.z = f.z;
   }
 }
 function convUpdate(h) {
@@ -1765,7 +1776,9 @@ function cellUpdate(h) {
   if (CELL.held && CELL.finger > 0.3) releaseBag();
   CELL.nieder = approach(CELL.nieder, IO.out.NiederAb ? 1 : 0, h / 0.22);
   IO.inp.NiederOben = CELL.nieder <= 0.001;
-  if (CELL.held) CELL.heldOff = Math.max(0, CELL.heldOff0 - (TCP.z - CELL.heldZ0));
+  // Sack liegt nach dem Greifen noch rPickTief ueber den Zinken; beim Anheben setzt er auf.
+  // Der Abstand darf nur kleiner werden (sonst "wandert" der Sack bei tiefen Ablagen nach oben).
+  if (CELL.held) CELL.heldOff = Math.min(CELL.heldOff, Math.max(0, CELL.heldOff0 - (TCP.z - CELL.heldZ0)));
   IO.inp.SackImGr = !!CELL.held;
   convUpdate(h);
   palletUpdate(h);
@@ -1813,9 +1826,10 @@ function updateMarkers() {
   const offs = { fPickUeber: [0, 0], fPickVor: [0, 0], fPick: [0, 0], fUeber: [0, 0], fVor: [0, 0], fAblage: [0, 0], fAbheben: [0, 0] };
   for (const [n] of MK) {
     const p = F[n], m = markers[n];
-    if (!p) { m.visible = false; continue; }
-    m.visible = true;
-    m.position.set(p.x + offs[n][0], p.y + offs[n][1], p.z);
+    m.visible = !!p;
+    // CSS2D-Beschriftungen beachten die Sichtbarkeit der Eltern nicht -> explizit setzen
+    m.children[0].visible = !!p && mkGroup.visible;
+    if (p) m.position.set(p.x + offs[n][0], p.y + offs[n][1], p.z);
   }
   // Beschriftungen nebeneinanderliegender Punkte entzerren
   const pairs = [['fUeber', 'fAbheben', 'fVor', 'fAblage'], ['fPickUeber', 'fPickVor', 'fPick']];
@@ -2013,7 +2027,7 @@ $('#selSpeed').addEventListener('change', (e) => { speed = parseFloat(e.target.v
 document.querySelectorAll('[data-cam]').forEach((b) => b.addEventListener('click', () => setCam(b.dataset.cam)));
 function toggle(id, fn) { const b = $(id); b.addEventListener('click', () => { const on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', String(on)); fn(on); }); }
 toggle('#tgTrail', (on) => { trail.visible = on; });
-toggle('#tgPts', (on) => { mkGroup.visible = on; });
+toggle('#tgPts', (on) => { mkGroup.visible = on; markersDirty = true; });
 toggle('#tgFeed', (on) => { CELL.feedOn = on; });
 toggle('#tgEnd', (on) => { IO.inp.ZyklEnde = on; });
 
